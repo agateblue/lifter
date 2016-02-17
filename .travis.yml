@@ -9,7 +9,7 @@ addons:
       - deadsnakes
     packages:
       - python3.5
-      
+
 env:
   - TOXENV=py35
   - TOXENV=py34
@@ -25,13 +25,13 @@ script: tox
 
 # After you create the Github repo and add it to Travis, run the
 # travis_pypi_setup.py script to finish PyPI deployment setup
-deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  user: eliotberriot
-  password:
-    secure: PLEASE_REPLACE_ME
-  on:
-    tags: true
-    repo: eliotberriot/lifter
-    condition: $TOXENV == py27
+# deploy:
+#   provider: pypi
+#   distributions: sdist bdist_wheel
+#   user: eliotberriot
+#   password:
+#     secure: PLEASE_REPLACE_ME
+#   on:
+#     tags: true
+#     repo: eliotberriot/lifter
+#     condition: $TOXENV == py27
