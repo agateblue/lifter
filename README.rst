@@ -272,10 +272,14 @@ order_by
 
 Use this method to change results order based on a given attribute:
 
+.. code-block:: python
+
     # will return younger users first
     manager.all().order_by('age')
 
 You can prefix the attribute with `-` to reverse the ordering:
+
+.. code-block:: python
 
     # will return older users first
     manager.all().order_by('-age')
