@@ -126,6 +126,11 @@ class TestManagers(unittest.TestCase):
         with self.assertRaises(lifter.DoesNotExist):
             self.dict_manager.get(a=123)
 
+    def test_can_filter_using_callable(self):
+        self.assertEqual(self.manager.filter(order=lambda v: v in [1, 3]), [self.OBJECTS[1], self.OBJECTS[2]])
+
+        self.assertEqual(self.dict_manager.filter(order=lambda v: v in [1, 3]), [self.DICTS[1], self.DICTS[2]])
+
 if __name__ == '__main__':
     import sys
     sys.exit(unittest.main())

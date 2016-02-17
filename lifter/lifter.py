@@ -66,8 +66,13 @@ class QuerySet(object):
                 key = key.replace('__', '.')
 
                 getter = attrgetter(key)
-                if not getter(obj) == value:
-                    return False
+                if hasattr(value, '__call__'):
+                    # User passed a callable for a custom comparison
+                    if not value(getter(obj)):
+                        return False
+                else:
+                    if not getter(obj) == value:
+                        return False
             return True
 
         return object_filter
