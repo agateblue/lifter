@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 
+from collections import OrderedDict
+
+from . import utils
+
 
 REPR_OUTPUT_SIZE = 10
 
-from . import utils
 
 class DoesNotExist(ValueError):
     pass
 
+
 class MultipleObjectsReturned(ValueError):
     pass
+
 
 class QuerySet(object):
     def __init__(self, values):
@@ -136,6 +141,9 @@ class QuerySet(object):
 
         all_values = list([getter(obj) for obj in self._values])
         return self._clone(all_values)
+
+    def distinct(self):
+        return self._clone(utils.unique_everseen(self._values))
 
 class Manager(object):
     """Used to retrieve / order / filter preferences pretty much as django's ORM managers"""

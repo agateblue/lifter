@@ -24,3 +24,9 @@ def resolve_attr(obj, attr):
         except KeyError:
             raise ValueError('Object {0} has no attribute or key "{1}"'.format(obj, key))
     return obj
+
+def unique_everseen(seq):
+    """Solution found here : http://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-python-whilst-preserving-order"""
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
