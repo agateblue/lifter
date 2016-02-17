@@ -5,6 +5,7 @@ __email__ = 'contact@eliotberriot.com'
 __version__ = '0.1.0'
 
 from .lifter import Manager, DoesNotExist, MultipleObjectsReturned
+from . import lookups
 
 def load(values):
     return Manager(values)

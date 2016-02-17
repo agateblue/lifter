@@ -2,6 +2,7 @@
 
 import operator
 
+REPR_OUTPUT_SIZE = 10
 
 def attrgetter(*items):
 
@@ -57,6 +58,12 @@ class QuerySet(object):
     def _clone(self, new_values):
         return self.__class__(new_values)
 
+    def __repr__(self):
+        data = list(self[:REPR_OUTPUT_SIZE + 1])
+        if len(data) > REPR_OUTPUT_SIZE:
+            data[-1] = "...(remaining elements truncated)..."
+        return '<QuerySet %r>' % data
+        
     def _build_filter(self, **kwargs):
         """build a single filter function used to match arbitrary object"""
 

@@ -22,16 +22,16 @@ class TestObject(object):
     def __repr__(self):
         return self.name
 
-class TestManagers(unittest.TestCase):
+class TestBase(unittest.TestCase):
     PARENTS = [
         TestObject(name='parent_1'),
         TestObject(name='parent_2'),
     ]
     OBJECTS = [
-        TestObject(name='test_1', order=2, a=1, parent=PARENTS[0]),
-        TestObject(name='test_2', order=3, a=1, parent=PARENTS[0]),
-        TestObject(name='test_3', order=1, a=2, parent=PARENTS[1]),
-        TestObject(name='test_4', order=4, a=2, parent=PARENTS[1]),
+        TestObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama'),
+        TestObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas'),
+        TestObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas'),
+        TestObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington'),
     ]
 
     DICTS = [o.__dict__ for o in OBJECTS]
@@ -39,6 +39,8 @@ class TestManagers(unittest.TestCase):
     def setUp(self):
         self.manager = lifter.load(self.OBJECTS)
         self.dict_manager = lifter.load(self.DICTS)
+
+class TestQueries(TestBase):
 
     def test_default_order(self):
         self.assertEqual(list(self.manager.all()), self.OBJECTS)
@@ -130,6 +132,33 @@ class TestManagers(unittest.TestCase):
         self.assertEqual(self.manager.filter(order=lambda v: v in [1, 3]), [self.OBJECTS[1], self.OBJECTS[2]])
 
         self.assertEqual(self.dict_manager.filter(order=lambda v: v in [1, 3]), [self.DICTS[1], self.DICTS[2]])
+
+class TestLookups(TestBase):
+    def test_gt(self):
+        self.assertEqual(self.manager.filter(order=lifter.lookups.gt(3)), [self.OBJECTS[3]])
+
+    def test_gte(self):
+        self.assertEqual(self.manager.filter(order=lifter.lookups.gte(3)), [self.OBJECTS[1], self.OBJECTS[3]])
+
+    def test_lt(self):
+        self.assertEqual(self.manager.filter(order=lifter.lookups.lt(3)), [self.OBJECTS[0], self.OBJECTS[2]])
+
+    def test_lte(self):
+        self.assertEqual(self.manager.filter(order=lifter.lookups.lte(3)), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
+
+    def test_startswith(self):
+        self.assertEqual(self.manager.filter(label=lifter.lookups.startswith('a')), [self.OBJECTS[0], self.OBJECTS[1]])
+
+    def test_startswith(self):
+        self.assertEqual(self.manager.filter(label=lifter.lookups.endswith('s')), [self.OBJECTS[1], self.OBJECTS[2]])
+
+    def test_value_in(self):
+        self.assertEqual(self.manager.filter(label=lifter.lookups.value_in(['alabama', 'arkansas'])), [self.OBJECTS[0], self.OBJECTS[1]])
+
+    def test_range(self):
+        self.assertEqual(self.manager.filter(order=lifter.lookups.value_range(2, 3)), [self.OBJECTS[0], self.OBJECTS[1]])
+    # def test_lte(self):
+    #     self.assertEqual(self.manager.filter(order=lifter.lookups.lte(3)), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
 
 if __name__ == '__main__':
     import sys
