@@ -9,7 +9,7 @@ lifter
         :target: https://travis-ci.org/eliotberriot/lifter
 
 
-A lightweight query engine for Python iterables, inspired by Django ORM
+A lightweight query engine for Python iterables, inspired by Django ORM.
 
 * Free software: BSD license
 
@@ -20,7 +20,7 @@ Features
 
 * API similar to Django querysets_
 * Lightweight: absolutely no dependencies
-* Tested and working on Python 2.6 to Python 3.5
+* Tested and working on Python 2.7 to Python 3.5
 
 .. _querysets: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
 
