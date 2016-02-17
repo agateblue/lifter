@@ -34,9 +34,25 @@ class startswith(OneValueLookup):
     def lookup(self, value):
         return value.startswith(self.reference_value)
 
+class istartswith(OneValueLookup):
+    def lookup(self, value):
+        return value.lower().startswith(self.reference_value.lower())
+
 class endswith(OneValueLookup):
     def lookup(self, value):
         return value.endswith(self.reference_value)
+
+class iendswith(OneValueLookup):
+    def lookup(self, value):
+        return value.lower().endswith(self.reference_value.lower())
+
+class contains(OneValueLookup):
+    def lookup(self, value):
+        return self.reference_value in value
+
+class icontains(OneValueLookup):
+    def lookup(self, value):
+        return self.reference_value.lower() in value.lower()
 
 class value_in(OneValueLookup):
     def lookup(self, value):

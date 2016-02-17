@@ -28,10 +28,10 @@ class TestBase(unittest.TestCase):
         TestObject(name='parent_2'),
     ]
     OBJECTS = [
-        TestObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama'),
-        TestObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas'),
-        TestObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas'),
-        TestObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington'),
+        TestObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
+        TestObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
+        TestObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
+        TestObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
     ]
 
     DICTS = [o.__dict__ for o in OBJECTS]
@@ -181,7 +181,7 @@ class TestLookups(TestBase):
     def test_startswith(self):
         self.assertEqual(self.manager.filter(label=lifter.lookups.startswith('a')), [self.OBJECTS[0], self.OBJECTS[1]])
 
-    def test_startswith(self):
+    def test_endswith(self):
         self.assertEqual(self.manager.filter(label=lifter.lookups.endswith('s')), [self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_value_in(self):
@@ -190,6 +190,17 @@ class TestLookups(TestBase):
     def test_range(self):
         self.assertEqual(self.manager.filter(order=lifter.lookups.value_range(2, 3)), [self.OBJECTS[0], self.OBJECTS[1]])
 
+    def test_istartswith(self):
+        self.assertEqual(self.manager.filter(surname=lifter.lookups.istartswith('c')), [self.OBJECTS[1], self.OBJECTS[3]])
+
+    def test_iendswith(self):
+        self.assertEqual(self.manager.filter(surname=lifter.lookups.iendswith('t')), [self.OBJECTS[0], self.OBJECTS[3]])
+
+    def test_contains(self):
+        self.assertEqual(self.manager.filter(surname=lifter.lookups.contains('Lin')), [self.OBJECTS[2]])
+
+    def test_icontains(self):
+        self.assertEqual(self.manager.filter(surname=lifter.lookups.icontains('lin')), [self.OBJECTS[2], self.OBJECTS[3]])
 
 class TestAggregation(TestBase):
     def test_sum(self):
