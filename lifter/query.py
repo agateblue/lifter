@@ -130,7 +130,8 @@ class QuerySet(object):
         all_values = [getter(obj) for obj in self._values]
         return self._clone(all_values)
 
-    def values_list(self, *args, flat=False):
+    def values_list(self, *args, **kwargs):
+        flat = kwargs.get('flat', False)
         if flat and len(args) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
 

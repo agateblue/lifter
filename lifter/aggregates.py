@@ -40,4 +40,4 @@ class Avg(Aggregate):
     def aggregate(self, values):
         getter = utils.attrgetter(self.attr_name)
         total = sum([getter(v) for v in values])
-        return total / len(values)
+        return float(total) / len(values)
