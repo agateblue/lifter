@@ -133,6 +133,32 @@ class TestQueries(TestBase):
 
         self.assertEqual(self.dict_manager.filter(order=lambda v: v in [1, 3]), [self.DICTS[1], self.DICTS[2]])
 
+    def test_values(self):
+        expected = [
+            {'order': 2},
+            {'order': 3},
+        ]
+        self.assertEqual(self.manager.filter(a=1).values('order'), expected)
+        self.assertEqual(self.dict_manager.filter(a=1).values('order'), expected)
+
+        expected = [
+            {'order': 2, 'a': 1},
+            {'order': 3, 'a': 1},
+        ]
+        self.assertEqual(self.manager.filter(a=1).values('order', 'a'), expected)
+        self.assertEqual(self.dict_manager.filter(a=1).values('order', 'a'), expected)
+
+    def test_values_list(self):
+        expected = [2, 3]
+        self.assertEqual(self.manager.filter(a=1).values_list('order', flat=True), expected)
+        self.assertEqual(self.dict_manager.filter(a=1).values_list('order', flat=True), expected)
+
+        expected = [
+            (2, 1),
+            (3, 1),
+        ]
+        self.assertEqual(self.manager.filter(a=1).values_list('order', 'a'), expected)
+        self.assertEqual(self.dict_manager.filter(a=1).values_list('order', 'a'), expected)
 class TestLookups(TestBase):
     def test_gt(self):
         self.assertEqual(self.manager.filter(order=lifter.lookups.gt(3)), [self.OBJECTS[3]])

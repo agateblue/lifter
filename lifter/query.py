@@ -13,24 +13,24 @@ class MultipleObjectsReturned(ValueError):
 
 class QuerySet(object):
     def __init__(self, values):
-        self.values = list(values)
+        self._values = list(values)
 
     def __iter__(self):
-        for value in self.values:
+        for value in self._values:
             yield value
         raise StopIteration
 
     def __len__(self):
-        return len(self.values)
+        return len(self._values)
 
     def __repr__(self):
-        return '<{0}: {1}>'.format(self.__class__.__name__, str(list(self.values)))
+        return '<{0}: {1}>'.format(self.__class__.__name__, str(list(self._values)))
 
     def __getitem__(self, i):
-        return self.values[i]
+        return self._values[i]
 
     def __eq__(self, other):
-        return self.values == list(other)
+        return self._values == list(other)
 
     def _clone(self, new_values):
         return self.__class__(new_values)
@@ -70,33 +70,33 @@ class QuerySet(object):
             reverse = True
             key = key[1:]
 
-        return self._clone(sorted(self.values, key=utils.attrgetter(key), reverse=reverse))
+        return self._clone(sorted(self._values, key=utils.attrgetter(key), reverse=reverse))
 
     def all(self):
-        return self._clone(self.values)
+        return self._clone(self._values)
 
     def count(self):
         return len(self)
 
     def first(self):
         try:
-            return self.values[0]
+            return self._values[0]
         except IndexError:
             return None
 
     def last(self):
         try:
-            return self.values[-1]
+            return self._values[-1]
         except IndexError:
             return None
 
     def filter(self, **kwargs):
         _filter = self._build_filter(**kwargs)
-        return self._clone(filter(_filter, self.values))
+        return self._clone(filter(_filter, self._values))
 
     def exclude(self, **kwargs):
         _filter = self._build_filter(**kwargs)
-        return self._clone(filter(lambda v: not _filter(v), self.values))
+        return self._clone(filter(lambda v: not _filter(v), self._values))
 
     def get(self, **kwargs):
 
@@ -110,20 +110,42 @@ class QuerySet(object):
     def aggregate(self, *args, **kwargs):
         data = {}
         for aggregate in args:
-            data[aggregate.identifier] = aggregate.aggregate(self.values)
+            data[aggregate.identifier] = aggregate.aggregate(self._values)
         for key, aggregate in kwargs.items():
-            data[key] = aggregate.aggregate(self.values)
+            data[key] = aggregate.aggregate(self._values)
         return data
+
+    def values(self, *args):
+        def getter(obj):
+            data = {}
+            for arg in args:
+                g = utils.attrgetter(arg)
+                data[arg] = g(obj)
+            return data
+        all_values = [getter(obj) for obj in self._values]
+        return self._clone(all_values)
+
+    def values_list(self, *args, flat=False):
+        if flat and len(args) > 1:
+            raise ValueError('You cannot set flat to True if you want to return multiple values')
+
+        def getter(obj):
+            if flat:
+                return utils.attrgetter(args[0])(obj)
+            return tuple((utils.attrgetter(arg)(obj) for arg in args))
+
+        all_values = list([getter(obj) for obj in self._values])
+        return self._clone(all_values)
 
 class Manager(object):
     """Used to retrieve / order / filter preferences pretty much as django's ORM managers"""
 
     def __init__(self, values, queryset_class=QuerySet):
-        self.values = values
+        self._values = values
         self.queryset_class = queryset_class
 
     def get_queryset(self):
-        return self.queryset_class(self.values)
+        return self.queryset_class(self._values)
 
     def all(self):
         return self.get_queryset().all()
