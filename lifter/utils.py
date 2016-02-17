@@ -16,6 +16,7 @@ def attrgetter(*items):
 
 def resolve_attr(obj, attr):
     """A custom attrgetter that operates both on dictionaries and objects"""
+    attr = attr.replace('__', '.') # replace lookups
     for name in attr.split("."):
         try:
             obj = getattr(obj, name)

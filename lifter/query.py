@@ -52,7 +52,6 @@ class QuerySet(object):
         def object_filter(obj):
             for key, value in kwargs.items():
                 # we replace dango-like lookup by dots, so attrgetter can do his job
-                key = key.replace('__', '.')
 
                 getter = utils.attrgetter(key)
                 if hasattr(value, '__call__'):
