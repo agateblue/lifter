@@ -1,32 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import operator
 
 REPR_OUTPUT_SIZE = 10
 
-def attrgetter(*items):
-
-    if any(not isinstance(item, str) for item in items):
-        raise TypeError('attribute name must be a string')
-    if len(items) == 1:
-        attr = items[0]
-        def g(obj):
-            return resolve_attr(obj, attr)
-    else:
-        def g(obj):
-            return tuple(resolve_attr(obj, attr) for attr in items)
-    return g
-
-def resolve_attr(obj, attr):
-    """A custom attrgetter that operates both on dictionaries and objects"""
-    for name in attr.split("."):
-        try:
-            obj = getattr(obj, name)
-        except AttributeError:
-            obj = obj[name]
-        except KeyError:
-            raise ValueError('Object {0} has no attribute or key "{1}"'.format(obj, key))
-    return obj
+from . import utils
 
 class DoesNotExist(ValueError):
     pass
@@ -63,7 +40,7 @@ class QuerySet(object):
         if len(data) > REPR_OUTPUT_SIZE:
             data[-1] = "...(remaining elements truncated)..."
         return '<QuerySet %r>' % data
-        
+
     def _build_filter(self, **kwargs):
         """build a single filter function used to match arbitrary object"""
 
@@ -72,7 +49,7 @@ class QuerySet(object):
                 # we replace dango-like lookup by dots, so attrgetter can do his job
                 key = key.replace('__', '.')
 
-                getter = attrgetter(key)
+                getter = utils.attrgetter(key)
                 if hasattr(value, '__call__'):
                     # User passed a callable for a custom comparison
                     if not value(getter(obj)):
@@ -93,7 +70,7 @@ class QuerySet(object):
             reverse = True
             key = key[1:]
 
-        return self._clone(sorted(self.values, key=attrgetter(key), reverse=reverse))
+        return self._clone(sorted(self.values, key=utils.attrgetter(key), reverse=reverse))
 
     def all(self):
         return self._clone(self.values)
@@ -129,6 +106,14 @@ class QuerySet(object):
         if len(matches) > 1:
             raise MultipleObjectsReturned()
         return matches[0]
+
+    def aggregate(self, *args, **kwargs):
+        data = {}
+        for aggregate in args:
+            data[aggregate.identifier] = aggregate.aggregate(self.values)
+        for key, aggregate in kwargs.items():
+            data[key] = aggregate.aggregate(self.values)
+        return data
 
 class Manager(object):
     """Used to retrieve / order / filter preferences pretty much as django's ORM managers"""

@@ -4,8 +4,10 @@ __author__ = 'Eliot Berriot'
 __email__ = 'contact@eliotberriot.com'
 __version__ = '0.1.0'
 
-from .lifter import Manager, DoesNotExist, MultipleObjectsReturned
+from .query import Manager, DoesNotExist, MultipleObjectsReturned
 from . import lookups
+from .lookups import *
+from .aggregates import *
 
 def load(values):
     return Manager(values)

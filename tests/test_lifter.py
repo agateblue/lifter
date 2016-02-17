@@ -157,8 +157,22 @@ class TestLookups(TestBase):
 
     def test_range(self):
         self.assertEqual(self.manager.filter(order=lifter.lookups.value_range(2, 3)), [self.OBJECTS[0], self.OBJECTS[1]])
-    # def test_lte(self):
-    #     self.assertEqual(self.manager.filter(order=lifter.lookups.lte(3)), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
+
+
+class TestAggregation(TestBase):
+    def test_sum(self):
+        self.assertEqual(self.manager.aggregate(lifter.Sum('a')), {'a__sum': 6})
+        self.assertEqual(self.manager.aggregate(total=lifter.Sum('a')), {'total': 6})
+
+    def test_min(self):
+        self.assertEqual(self.manager.aggregate(lifter.Min('a')), {'a__min': 1})
+
+    def test_max(self):
+        self.assertEqual(self.manager.aggregate(lifter.Max('a')), {'a__max': 2})
+
+    def test_avg(self):
+        self.assertEqual(self.manager.aggregate(lifter.Avg('a')), {'a__avg': 1.5})
+
 
 if __name__ == '__main__':
     import sys
