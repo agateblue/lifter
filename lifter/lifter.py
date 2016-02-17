@@ -3,6 +3,30 @@
 import operator
 
 
+def attrgetter(*items):
+
+    if any(not isinstance(item, str) for item in items):
+        raise TypeError('attribute name must be a string')
+    if len(items) == 1:
+        attr = items[0]
+        def g(obj):
+            return resolve_attr(obj, attr)
+    else:
+        def g(obj):
+            return tuple(resolve_attr(obj, attr) for attr in items)
+    return g
+
+def resolve_attr(obj, attr):
+    """A custom attrgetter that operates both on dictionaries and objects"""
+    for name in attr.split("."):
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            obj = obj[name]
+        except KeyError:
+            raise ValueError('Object {0} has no attribute or key "{1}"'.format(obj, key))
+    return obj
+
 class DoesNotExist(ValueError):
     pass
 
@@ -41,7 +65,7 @@ class QuerySet(object):
                 # we replace dango-like lookup by dots, so attrgetter can do his job
                 key = key.replace('__', '.')
 
-                getter = operator.attrgetter(key)
+                getter = attrgetter(key)
                 if not getter(obj) == value:
                     return False
             return True
@@ -57,7 +81,7 @@ class QuerySet(object):
             reverse = True
             key = key[1:]
 
-        return self._clone(sorted(self.values, key=operator.attrgetter(key), reverse=reverse))
+        return self._clone(sorted(self.values, key=attrgetter(key), reverse=reverse))
 
     def all(self):
         return self._clone(self.values)
