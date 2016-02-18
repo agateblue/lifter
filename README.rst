@@ -110,10 +110,10 @@ Of course it's totally doable in plain python. A for loop, some if statements, m
     active_without_brown_eyes_sorted = sorted(active_without_brown_eyes, key=lambda v: v['age'])
 
     # minimum and average women age
-    women = [user for user in users if user['gender'] == 'female']
-    total_age = sum([woman['age'] for woman in women])
-    women_average_age = total_age / len(women)
-    minimum_woman_age = min([woman['age'] for woman in women])
+    from statistics import mean
+    women_ages = [user['age'] for user in users if user['gender'] == 'female']
+    women_average_age = mean(women_ages)
+    minimum_woman_age = min(women_ages)
 
 But, as you can see, plain Python code is quite redundant and not especially readable. It would be even longer without list comprehensions.
 
