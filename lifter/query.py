@@ -15,6 +15,68 @@ class DoesNotExist(ValueError):
 class MultipleObjectsReturned(ValueError):
     pass
 
+class Q(object):
+    AND = 'AND'
+    OR = 'OR'
+    default = AND
+
+    def __init__(self, **kwargs):
+        self.children = []
+        self.field, self.lookup = None, None
+        self.negated = False
+        self.operator = self.default
+
+        if len(kwargs) > 1:
+            self.children = [Q(key=value) for field, lookup in kwargs.items()]
+        elif len(kwargs) == 1:
+            self.field, self.lookup = list(kwargs.items())[0]
+
+    @property
+    def operator_matcher(self):
+        if self.operator == self.AND:
+            return all
+        return any
+
+    def match(self, obj):
+        if self.children:
+            # The query contain subqueries, we just compile their result
+            do_match = self.operator_matcher([child.match(obj) for child in self.children])
+        else:
+            getter = utils.attrgetter(self.field)
+            if hasattr(self.lookup, '__call__'):
+                do_match = self.lookup(getter(obj))
+            else:
+                do_match = getter(obj) == self.lookup
+
+        if self.negated:
+            return not do_match
+        return do_match
+
+    def _clone(self):
+        clone = self.__class__()
+        clone.children = self.children
+        clone.field, clone.lookup = self.field, self.lookup
+        return clone
+
+    def negate(self):
+        self.negated = not self.negated
+
+    def _combine(self, other, operator):
+        new_query = self.__class__()
+        new_query.operator = operator
+        new_query.children = [self, other]
+        return new_query
+
+    def __or__(self, other):
+        return self._combine(other, self.OR)
+
+    def __and__(self, other):
+        return self._combine(other, self.AND)
+
+    def __invert__(self):
+        query = self._clone()
+        query.negate()
+        return query
 
 class QuerySet(object):
     def __init__(self, values):
