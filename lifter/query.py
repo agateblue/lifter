@@ -119,7 +119,7 @@ class QuerySet(object):
         for key, aggregate in kwargs.items():
             data[key] = aggregate.aggregate(self._values)
         if flat:
-            data = data.values()
+            data = list(data.values())
         return data
 
     def values(self, *args):
