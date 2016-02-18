@@ -7,6 +7,27 @@ class IterableAttr(object):
     def __init__(self, iterable, key):
         self._items = [item[key] for item in iterable]
 
+    def __gt__(self, other):
+        return any(item > other for item in self._items)
+
+    def __gte__(self, other):
+        return any(item >= other for item in self._items)
+
+    def __lt__(self, other):
+        return any(item < other for item in self._items)
+
+    def __lte__(self, other):
+        return any(item <= other for item in self._items)
+
+    def startswith(self, substr):
+        return any(str(item).startswith(substr) for item in self._items)
+
+    def endswith(self, substr):
+        return any(str(item).endswith(substr) for item in self._items)
+
+    def __contains__(self, other):
+        return other in self._items
+
     def __eq__(self, other):
         return other in self._items
 
