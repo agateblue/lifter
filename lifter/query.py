@@ -113,10 +113,13 @@ class QuerySet(object):
 
     def aggregate(self, *args, **kwargs):
         data = {}
+        flat = kwargs.pop('flat', False)
         for aggregate in args:
             data[aggregate.identifier] = aggregate.aggregate(self._values)
         for key, aggregate in kwargs.items():
             data[key] = aggregate.aggregate(self._values)
+        if flat:
+            data = data.values()
         return data
 
     def values(self, *args):
