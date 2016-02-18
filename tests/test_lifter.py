@@ -219,6 +219,10 @@ class TestQueries(TestBase):
 
 class TestQObjects(TestBase):
 
+    def test_q_object_cast_kwargs_to_lookup_if_needed(self):
+        query = lifter.Q(name='test')
+        self.assertTrue(isinstance(query.lookup, lifter.exact))
+
     def test_q_object_can_match_objects(self):
         matching = {'name': 'test'}
         not_matching = {'name': 'manny'}

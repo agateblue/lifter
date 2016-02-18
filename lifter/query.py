@@ -3,7 +3,7 @@
 from collections import OrderedDict
 
 from . import utils
-
+from . import lookups
 
 REPR_OUTPUT_SIZE = 10
 
@@ -30,6 +30,9 @@ class Q(object):
             self.children = [Q(key=value) for field, lookup in kwargs.items()]
         elif len(kwargs) == 1:
             self.field, self.lookup = list(kwargs.items())[0]
+            if not hasattr(self.lookup, '__call__'):
+                # we convert the argument value to a callable lookup for easier handling in matching
+                self.lookup = lookups.exact(self.lookup)
 
     @property
     def operator_matcher(self):
@@ -43,10 +46,7 @@ class Q(object):
             do_match = self.operator_matcher([child.match(obj) for child in self.children])
         else:
             getter = utils.attrgetter(self.field)
-            if hasattr(self.lookup, '__call__'):
-                do_match = self.lookup(getter(obj))
-            else:
-                do_match = getter(obj) == self.lookup
+            do_match = self.lookup(getter(obj))
 
         if self.negated:
             return not do_match
