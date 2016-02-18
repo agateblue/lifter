@@ -27,7 +27,7 @@ class Q(object):
         self.operator = self.default
 
         if len(kwargs) > 1:
-            self.children = [Q(key=value) for field, lookup in kwargs.items()]
+            self.children = [Q(**{field: lookup}) for field, lookup in kwargs.items()]
         elif len(kwargs) == 1:
             self.field, self.lookup = list(kwargs.items())[0]
             if not hasattr(self.lookup, '__call__'):
@@ -108,25 +108,6 @@ class QuerySet(object):
             data[-1] = "...(remaining elements truncated)..."
         return '<QuerySet %r>' % data
 
-    def _build_filter(self, **kwargs):
-        """build a single filter function used to match arbitrary object"""
-
-        def object_filter(obj):
-            for key, value in kwargs.items():
-                # we replace dango-like lookup by dots, so attrgetter can do his job
-
-                getter = utils.attrgetter(key)
-                if hasattr(value, '__call__'):
-                    # User passed a callable for a custom comparison
-                    if not value(getter(obj)):
-                        return False
-                else:
-                    if not getter(obj) == value:
-                        return False
-            return True
-
-        return object_filter
-
     def exists(self):
         return len(self) > 0
 
@@ -155,6 +136,15 @@ class QuerySet(object):
             return self._values[-1]
         except IndexError:
             return None
+
+
+    def _build_filter(self, **kwargs):
+        """build a single filter function used to match arbitrary object"""
+        query = Q(**kwargs)
+        def object_filter(obj):
+            return query.match(obj)
+
+        return object_filter
 
     def filter(self, **kwargs):
         _filter = self._build_filter(**kwargs)
