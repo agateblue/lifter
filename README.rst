@@ -173,8 +173,8 @@ copy-paste the content of `tests/fake_data.py` inside your python interpreter th
 
 .. note::
 
-    All exemples use a list of dictionnaries as source data, but lifter works exactly the same
-    if you feed your manager with a list of regular objects. Lifter will seamlessely lookup both object attributes and
+    All examples use a list of dictionaries as source data, but lifter works exactly the same
+    if you feed your manager with a list of regular objects. Lifter will seamlessly lookup both object attributes and
     dictionary keys.
 
 About querysets
@@ -183,7 +183,7 @@ About querysets
 Just like Django, lifter is based on querysets_. Basically, a queryset in lifter is an object containing values
 with functions to refine these values.
 
-You can chain most queryset methods, which wil give you enough flexebility to build complex queries:
+You can chain most queryset methods, which wil give you enough flexibility to build complex queries:
 
 .. code-block:: python
 
@@ -198,12 +198,12 @@ You can chain most queryset methods, which wil give you enough flexebility to bu
 
 .. warning::
 
-    At the moment, lifter querysets are not lazy, which mean they are applied immediatly when called.
+    At the moment, lifter querysets are not lazy, which mean they are applied immediately when called.
 
 filter
 ++++++
 
-One of the most basic query method is `filter`. Use it if you want to retrieve objects that match a set of criterias. Example:
+One of the most basic query method is `filter`. Use it if you want to retrieve objects that match a set of criteria. Example:
 
 .. code-block:: python
 
@@ -223,7 +223,7 @@ This time, we'll only get users named `Manny` AND with a beard.
 get
 +++
 
-`get` returns a single object that match a set of criterias, raising an exception if no value is found or if multiple values are found:
+`get` returns a single object that match a set of criteria, raising an exception if no value is found or if multiple values are found:
 
 .. code-block:: python
 
@@ -243,7 +243,7 @@ You can catch these exceptions as follow:
     except lifter.MultipleObjectsReturned:
         print('Bernard or Manny, you have to choose')
 
-And, finally, you can chain `get` after other queryset to reduce available choices:
+And, finally, you can chain `get` after other querysets to reduce available choices:
 
 .. code-block:: python
 
@@ -253,7 +253,7 @@ And, finally, you can chain `get` after other queryset to reduce available choic
 exclude
 +++++++
 
-This method is the exact opposite of `filter`. Use it if you want to retrieve objects that do not match a set of criterias. Example:
+This method is the exact opposite of `filter`. Use it if you want to retrieve objects that do not match a set of criteria. Example:
 
 .. code-block:: python
 
@@ -276,9 +276,9 @@ order_by
 .. note::
 
     By default, order of provided data is preserved accross all subsequent querysets,
-    unless you explicitely call `order_by` at some point.
+    unless you explicitly call `order_by` at some point.
 
-Use this method to change results order based on a given attribute:
+Use this method to change results' order based on a given attribute:
 
 .. code-block:: python
 
@@ -314,7 +314,7 @@ A simple method that return `True` if a queryset contains at least one result, r
 first
 +++++
 
-A shortcut that return the first result or `None` if the query has no results:
+A shortcut that returns the first result or `None` if the query has no results:
 
 .. code-block:: python
 
