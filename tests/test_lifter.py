@@ -119,7 +119,7 @@ class TestQueries(TestBase):
             }
         ]
         manager = lifter.load(companies)
-        self.assertNotIn(users[1], manager.filter(employees__tags__name='friendly'))
+        self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
 
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
