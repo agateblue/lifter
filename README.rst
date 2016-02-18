@@ -9,6 +9,11 @@ lifter
         :target: https://travis-ci.org/EliotBerriot/lifter
 
 
+.. warning::
+
+    This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
+    Contributions are welcome :)
+
 A lightweight query engine for Python iterables, inspired by Django ORM.
 
 * Free software: BSD license
@@ -18,10 +23,10 @@ A lightweight query engine for Python iterables, inspired by Django ORM.
 Features
 --------
 
+* Operates on plain objects or mapping (such as dictionaries)
 * API similar to Django querysets_
 * Lightweight: absolutely no dependencies
 * Tested and working on Python 2.7 to Python 3.5
-
 .. _querysets: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
 
 Why lifter?
@@ -191,6 +196,9 @@ You can chain most queryset methods, which wil give you enough flexebility to bu
 
    Unless stated otherwise, all queryset methods behave just like Django querysets_
 
+.. warning::
+
+    At the moment, lifter querysets are not lazy, which mean they are applied immediatly when called.
 
 filter
 ++++++
