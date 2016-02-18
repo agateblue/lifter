@@ -69,6 +69,30 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.exclude(parent__name='parent_1'), self.DICTS[2:])
         self.assertEqual(self.dict_manager.get(parent__name='parent_1', order=2), self.DICTS[0])
 
+    def test_exception_raised_on_missing_attr(self):
+        self.assertRaises(ValueError, self.manager.filter, x="y")
+        self.assertRaises(ValueError, self.dict_manager.filter, x="y")
+
+    def test_can_check_nested_iterables(self):
+        users = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {'name': 'nice'},
+                    {'name': 'friendly'},
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {'name': 'friendly'},
+                ]
+            },
+        ]
+        manager = lifter.load(users)
+        self.assertNotIn(users[1], manager.filter(tags__name='nice'))
+        self.assertRaises(ValueError, manager.filter, tags__x='y')
+
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
 
