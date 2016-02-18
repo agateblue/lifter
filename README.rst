@@ -453,6 +453,14 @@ Additionaly, you can return multiple aggregates at once:
 
     manager.all().aggregate(lifter.Sum('number_of_children'), lifter.Avg('age'))
 
+If you would rather have a flat list of values returned, use the flat keyword:
+
+.. code-block:: python
+
+    # [267]
+
+    manager.all().aggregate(children=lifter.Sum('number_of_children'), flat=True)
+
 Available lookups are:
 
 - `Sum`: sums the values of the given field

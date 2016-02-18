@@ -216,6 +216,8 @@ class TestAggregation(TestBase):
     def test_avg(self):
         self.assertEqual(self.manager.aggregate(lifter.Avg('a')), {'a__avg': 1.5})
 
+    def test_flat(self):
+        self.assertEqual(self.manager.aggregate(lifter.Avg('a'), flat=True), [1.5])
 
 if __name__ == '__main__':
     import sys
