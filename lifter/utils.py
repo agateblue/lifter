@@ -10,6 +10,9 @@ class IterableAttr(object):
     def __eq__(self, other):
         return other in self._items
 
+    def __getitem__(self, key):
+        return self.__class__(self._items, key)
+
 
 def attrgetter(*items):
 
