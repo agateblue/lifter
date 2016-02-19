@@ -1,14 +1,42 @@
 
 import operator
 
+def need_flattening(value):
+    try:
+        return isinstance(value[0], IterableAttr)
+    except (IndexError, TypeError):
+        return False
+
+def flatten(root):
+    """Resolve of attributes into a flat list so we can run a lookup against each of these values"""
+    if isinstance(root, IterableAttr):
+        for value in root._items:
+            if need_flattening(value):
+                for subvalue in flatten(value):
+                    yield subvalue
+            else:
+                yield value
+
+    else:
+        yield root
+
+
 
 class IterableAttr(object):
 
     def __init__(self, iterable, key):
+        self._key = key
         self._items = [item[key] for item in iterable]
 
-    def __eq__(self, other):
-        return other in self._items
+    def __repr__(self):
+        REPR_OUTPUT_SIZE = 10
+        data = list(self._items[:REPR_OUTPUT_SIZE + 1])
+        if len(data) > REPR_OUTPUT_SIZE:
+            data[-1] = "...(remaining elements truncated)..."
+        return '<IterableAttr %r>' % data
+
+    def __len__(self):
+        return len(self._items)
 
     def __getitem__(self, key):
         return self.__class__(self._items, key)

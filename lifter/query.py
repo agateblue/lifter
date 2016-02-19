@@ -46,7 +46,15 @@ class Q(object):
             do_match = self.operator_matcher([child.match(obj) for child in self.children])
         else:
             getter = utils.attrgetter(self.field)
-            do_match = self.lookup(getter(obj))
+            value = getter(obj)
+            if not isinstance(value, utils.IterableAttr):
+                do_match = self.lookup(value)
+            else:
+                if utils.need_flattening(value):
+                    values = utils.flatten(value)
+                else:
+                    values = value
+                do_match = any([self.lookup(item) for item in values])
 
         if self.negated:
             return not do_match

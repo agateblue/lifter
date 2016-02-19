@@ -8,6 +8,7 @@ from .query import Manager, DoesNotExist, MultipleObjectsReturned, Q
 from . import lookups
 from .lookups import *
 from .aggregates import *
+from . import utils
 
 def load(values):
     return Manager(values)

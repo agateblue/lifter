@@ -90,7 +90,7 @@ class TestQueries(TestBase):
             },
         ]
         manager = lifter.load(users)
-        self.assertNotIn(users[1], manager.filter(tags__name='nice'))
+        self.assertEqual([users[0]], manager.filter(tags__name='nice'))
         self.assertRaises(ValueError, manager.filter, tags__x='y')
 
         companies = [
@@ -116,10 +116,24 @@ class TestQueries(TestBase):
                         ]
                     }
                 ]
-            }
+            },
+            {
+                'name': 'narcos',
+                'employees': [
+                    {
+                        'name': 'pablo escobar',
+                        'tags': [
+                            {'name': 'drug dealer'},
+                            {'name': 'activist'},
+                        ]
+                    }
+                ]
+            },
         ]
         manager = lifter.load(companies)
-        self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
+        self.assertEqual([companies[0]], manager.filter(employees__tags__name='friendly'))
+        self.assertEqual([companies[0]], manager.filter(employees__tags__name=lifter.startswith('fr')))
+        self.assertEqual([companies[1], companies[2]], manager.filter(employees__tags__name=lifter.icontains('act')))
 
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
