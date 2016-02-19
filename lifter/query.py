@@ -28,9 +28,6 @@ class QuerySet(object):
     def __len__(self):
         return len(self._values)
 
-    def __repr__(self):
-        return '<{0}: {1}>'.format(self.__class__.__name__, str(list(self._values)))
-
     def __getitem__(self, i):
         return self._values[i]
 
