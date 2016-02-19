@@ -4,8 +4,11 @@ import operator
 
 class IterableAttr(object):
 
-    def __init__(self, iterable, key):
-        self._items = [item[key] for item in iterable]
+    def __init__(self, iterable, key=None):
+        if key is not None:
+            self._items = [item[key] for item in iterable]
+        else:
+            self._items = iterable
 
     def __gt__(self, other):
         return any(item > other for item in self._items)
@@ -19,17 +22,17 @@ class IterableAttr(object):
     def __lte__(self, other):
         return any(item <= other for item in self._items)
 
-    def startswith(self, substr):
-        return any(str(item).startswith(substr) for item in self._items)
-
-    def endswith(self, substr):
-        return any(str(item).endswith(substr) for item in self._items)
-
     def __contains__(self, other):
         return other in self._items
 
     def __eq__(self, other):
         return other in self._items
+
+    def __call__(self, *args, **kwargs):
+        return self.__class__([item(*args, **kwargs) for item in self._items])
+
+    def __getattr__(self, name):
+        return self.__class__([getattr(item, name) for item in self._items])
 
     def __getitem__(self, key):
         return self.__class__(self._items, key)
