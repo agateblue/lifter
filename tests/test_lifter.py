@@ -134,6 +134,7 @@ class TestQueries(TestBase):
         self.assertEqual([companies[0]], manager.filter(employees__tags__name='friendly'))
         self.assertEqual([companies[0]], manager.filter(employees__tags__name=lifter.startswith('fr')))
         self.assertEqual([companies[1], companies[2]], manager.filter(employees__tags__name=lifter.icontains('act')))
+        self.assertEqual([companies[1], companies[2]], manager.filter(employees__tags={'name': 'activist'}))
 
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
