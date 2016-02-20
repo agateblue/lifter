@@ -10,4 +10,10 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Ogreman
+* Pentusha
+* Mec-iS
+* johnfraney
+* youtux
+
+Join us ;)
