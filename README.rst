@@ -5,23 +5,31 @@ lifter
 .. image:: https://img.shields.io/pypi/v/lifter.svg
         :target: https://pypi.python.org/pypi/lifter
 
-.. image:: https://img.shields.io/travis/eliotberriot/lifter.svg
-        :target: https://travis-ci.org/eliotberriot/lifter
+.. image:: https://img.shields.io/travis/EliotBerriot/lifter.svg
+        :target: https://travis-ci.org/EliotBerriot/lifter
 
 
 A lightweight query engine for Python iterables, inspired by Django ORM.
 
 * Free software: BSD license
 
+
+**Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
+Contributions are welcome :)
+
+The query api will probably be under a lot of changes soon. If you want to be part of the discussion
+and contribute, please refer to the `corresponding issue <https://github.com/EliotBerriot/lifter/issues/15>`_.
+
+
 .. contents:: :depth: 1
 
 Features
 --------
 
+* Operates on plain objects or mapping (such as dictionaries)
 * API similar to Django querysets_
 * Lightweight: absolutely no dependencies
 * Tested and working on Python 2.7 to Python 3.5
-
 .. _querysets: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
 
 Why lifter?
@@ -36,45 +44,45 @@ Consider the following list of users:
     users = [
         {
             "id": "56c4e39a3e05a86e9f759ba8",
-            "is_active": true,
+            "is_active": True,
             "number_of_children": 0,
             "age": 35,
             "eye_color": "brown",
             "name": "Bernard",
             "gender": "male",
-            "has_beard": false,
+            "has_beard": False,
             "email": "bernard@blackbooks.com",
-            "own_bookshop": true,
+            "own_bookshop": True,
             "company": {
                 "name": "blackbooks"
             }
         },
         {
             "id": "56c4e39a3d08fcd553cb73b9",
-            "is_active": true,
+            "is_active": True,
             "number_of_children": 0,
             "age": 34,
             "eye_color": "brown",
             "name": "Manny",
             "gender": "male",
-            "has_beard": true,
+            "has_beard": True,
             "email": "manny@blackbooks.com",
-            "own_bookshop": false,
+            "own_bookshop": False,
             "company": {
                 "name": "blackbooks"
             }
         },
         {
             "id": "56c4e39a1f9b6f64db8a1b98",
-            "is_active": true,
+            "is_active": True,
             "number_of_children": 0,
             "age": 35,
             "eye_color": "brown",
             "name": "Fran",
             "gender": "female",
-            "has_beard": false,
+            "has_beard": False,
             "email": "fran@blackbooks.com",
-            "own_bookshop": false,
+            "own_bookshop": False,
             "company": {
                 "name": "blackbooks"
             }
@@ -95,20 +103,32 @@ Of course it's totally doable in plain python. A for loop, some if statements, m
 .. code-block:: python
 
     # Getting all active 26 years old users
-    under_26 = [user for user in users if user['age'] == 26 and user['is_active']]
+    under_26 = [
+        user for user in users
+        if user['age'] == 26 and user['is_active']
+    ]
 
     # Getting names and emails of inactive users
-    inactive_mail_and_names = [(user['name'], user['email']) for user in users if not user['is_active']]
+    inactive_mail_and_names = [
+        (user['name'], user['email']) for user in users
+        if not user['is_active']
+    ]
 
     # Getting all active users except the one with brown eyes and sort them by age
-    active_without_brown_eyes = [user for user in users if user['is_active'] and not user['eye_color'] == 'brown']
+    active_without_brown_eyes = [
+        user for user in users
+        if user['is_active'] and not user['eye_color'] == 'brown'
+    ]
     active_without_brown_eyes_sorted = sorted(active_without_brown_eyes, key=lambda v: v['age'])
 
     # minimum and average women age
-    women = [user for user in users if user['gender'] == 'female']
-    total_age = sum([woman['age'] for woman in women])
-    women_average_age = total_age / len(women)
-    minimum_woman_age = min([woman['age'] for woman in women])
+    from statistics import mean
+    women_ages = [
+        user['age'] for user in users
+        if user['gender'] == 'female'
+    ]
+    women_average_age = mean(women_ages)
+    minimum_woman_age = min(women_ages)
 
 But, as you can see, plain Python code is quite redundant and not especially readable. It would be even longer without list comprehensions.
 
@@ -128,9 +148,12 @@ Let's see if we can do better using lifter:
     inactive_mail_and_names = manager.filter(is_active=False).values_list('name', 'email')
 
     # Getting all active users except the one with brown eyes and sort them by age
-    active_without_brown_eyes_sorted = manager.filter(is_active=True)\
-                                              .exclude(eye_color='brown')\
-                                              .order_by('age')
+    active_without_brown_eyes_sorted = (
+        manager
+        .filter(is_active=True)
+        .exclude(eye_color='brown')
+        .order_by('age')
+    )
 
     # average women age
     women_average_age = manager.filter(gender='female').aggregate(lifter.Avg('age'), lifter.Min('age'))
@@ -168,8 +191,8 @@ copy-paste the content of `tests/fake_data.py` inside your python interpreter th
 
 .. note::
 
-    All exemples use a list of dictionnaries as source data, but lifter works exactly the same
-    if you feed your manager with a list of regular objects. Lifter will seamlessely lookup both object attributes and
+    All examples use a list of dictionaries as source data, but lifter works exactly the same
+    if you feed your manager with a list of regular objects. Lifter will seamlessly lookup both object attributes and
     dictionary keys.
 
 About querysets
@@ -178,7 +201,7 @@ About querysets
 Just like Django, lifter is based on querysets_. Basically, a queryset in lifter is an object containing values
 with functions to refine these values.
 
-You can chain most queryset methods, which wil give you enough flexebility to build complex queries:
+You can chain most queryset methods, which wil give you enough flexibility to build complex queries:
 
 .. code-block:: python
 
@@ -191,11 +214,14 @@ You can chain most queryset methods, which wil give you enough flexebility to bu
 
    Unless stated otherwise, all queryset methods behave just like Django querysets_
 
+.. warning::
+
+    At the moment, lifter querysets are not lazy, which mean they are applied immediately when called.
 
 filter
 ++++++
 
-One of the most basic query method is `filter`. Use it if you want to retrieve objects that match a set of criterias. Example:
+One of the most basic query method is `filter`. Use it if you want to retrieve objects that match a set of criteria. Example:
 
 .. code-block:: python
 
@@ -215,7 +241,7 @@ This time, we'll only get users named `Manny` AND with a beard.
 get
 +++
 
-`get` returns a single object that match a set of criterias, raising an exception if no value is found or if multiple values are found:
+`get` returns a single object that match a set of criteria, raising an exception if no value is found or if multiple values are found:
 
 .. code-block:: python
 
@@ -235,7 +261,7 @@ You can catch these exceptions as follow:
     except lifter.MultipleObjectsReturned:
         print('Bernard or Manny, you have to choose')
 
-And, finally, you can chain `get` after other queryset to reduce available choices:
+And, finally, you can chain `get` after other querysets to reduce available choices:
 
 .. code-block:: python
 
@@ -245,7 +271,7 @@ And, finally, you can chain `get` after other queryset to reduce available choic
 exclude
 +++++++
 
-This method is the exact opposite of `filter`. Use it if you want to retrieve objects that do not match a set of criterias. Example:
+This method is the exact opposite of `filter`. Use it if you want to retrieve objects that do not match a set of criteria. Example:
 
 .. code-block:: python
 
@@ -268,17 +294,26 @@ order_by
 .. note::
 
     By default, order of provided data is preserved accross all subsequent querysets,
-    unless you explicitely call `order_by` at some point.
+    unless you explicitly call `order_by` at some point.
 
-Use this method to change results order based on a given attribute:
+Use this method to change results' order based on a given attribute:
+
+.. code-block:: python
 
     # will return younger users first
     manager.all().order_by('age')
 
 You can prefix the attribute with `-` to reverse the ordering:
 
+.. code-block:: python
+
     # will return older users first
     manager.all().order_by('-age')
+
+.. code-block:: python
+
+    # will return random ordered queryset
+    manager.all().order_by('?')
 
 count
 +++++
@@ -302,7 +337,7 @@ A simple method that return `True` if a queryset contains at least one result, r
 first
 +++++
 
-A shortcut that return the first result or `None` if the query has no results:
+A shortcut that returns the first result or `None` if the query has no results:
 
 .. code-block:: python
 
@@ -440,6 +475,14 @@ Additionaly, you can return multiple aggregates at once:
 .. code-block:: python
 
     manager.all().aggregate(lifter.Sum('number_of_children'), lifter.Avg('age'))
+
+If you would rather have a flat list of values returned, use the flat keyword:
+
+.. code-block:: python
+
+    # [267]
+
+    manager.all().aggregate(children=lifter.Sum('number_of_children'), flat=True)
 
 Available lookups are:
 

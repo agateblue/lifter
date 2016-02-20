@@ -8,6 +8,8 @@ test_lifter
 Tests for `lifter` module.
 """
 
+import random
+import sys
 import unittest
 
 import lifter
@@ -69,6 +71,58 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.exclude(parent__name='parent_1'), self.DICTS[2:])
         self.assertEqual(self.dict_manager.get(parent__name='parent_1', order=2), self.DICTS[0])
 
+    def test_exception_raised_on_missing_attr(self):
+        self.assertRaises(ValueError, self.manager.filter, x="y")
+        self.assertRaises(ValueError, self.dict_manager.filter, x="y")
+
+    def test_can_check_nested_iterables(self):
+        users = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {'name': 'nice'},
+                    {'name': 'friendly'},
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {'name': 'friendly'},
+                ]
+            },
+        ]
+        manager = lifter.load(users)
+        self.assertNotIn(users[1], manager.filter(tags__name='nice'))
+        self.assertRaises(ValueError, manager.filter, tags__x='y')
+
+        companies = [
+            {
+                'name': 'blackbooks',
+                'employees': [
+                    {
+                        'name': 'Manny',
+                        'tags': [
+                            {'name': 'nice'},
+                            {'name': 'friendly'},
+                        ]
+                    }
+                ]
+            },
+            {
+                'name': 'community',
+                'employees': [
+                    {
+                        'name': 'Britta',
+                        'tags': [
+                            {'name': 'activist'},
+                        ]
+                    }
+                ]
+            }
+        ]
+        manager = lifter.load(companies)
+        self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
+
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
 
@@ -99,6 +153,23 @@ class TestQueries(TestBase):
 
         self.assertEqual(self.dict_manager.order_by('order')[:2], [self.DICTS[2], self.DICTS[0]])
         self.assertEqual(self.dict_manager.order_by('-order')[:2], [self.DICTS[3], self.DICTS[1]])
+
+        is_py3 = sys.version_info >= (3, 2)
+
+        random.seed(0)
+        random_ordered_0 = self.dict_manager.order_by('?')[:2]
+        if is_py3:
+            self.assertEqual(random_ordered_0, [self.DICTS[3], self.DICTS[1]])
+        else:
+            self.assertEqual(random_ordered_0, [self.DICTS[3], self.DICTS[2]])
+        random.seed(1)
+        random_ordered_1 = self.dict_manager.order_by('?')[:2]
+        if is_py3:
+            self.assertEqual(random_ordered_1, [self.DICTS[1], self.DICTS[2]])
+        else:
+            self.assertEqual(random_ordered_1, [self.DICTS[0], self.DICTS[2]])
+
+        self.assertNotEqual(random_ordered_0, random_ordered_1)
 
     def test_last(self):
         self.assertIsNone(self.manager.filter(a=123).last())
@@ -216,6 +287,8 @@ class TestAggregation(TestBase):
     def test_avg(self):
         self.assertEqual(self.manager.aggregate(lifter.Avg('a')), {'a__avg': 1.5})
 
+    def test_flat(self):
+        self.assertEqual(self.manager.aggregate(lifter.Avg('a'), flat=True), [1.5])
 
 if __name__ == '__main__':
     import sys

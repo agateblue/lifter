@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
+from random import sample
 
 from . import utils
 
@@ -27,9 +28,6 @@ class QuerySet(object):
 
     def __len__(self):
         return len(self._values)
-
-    def __repr__(self):
-        return '<{0}: {1}>'.format(self.__class__.__name__, str(list(self._values)))
 
     def __getitem__(self, i):
         return self._values[i]
@@ -69,6 +67,9 @@ class QuerySet(object):
         return len(self) > 0
 
     def order_by(self, key):
+        if key == '?':
+            return self._clone(sample(self._values, len(self)))
+
         reverse = False
         if key.startswith('-'):
             reverse = True
@@ -113,10 +114,13 @@ class QuerySet(object):
 
     def aggregate(self, *args, **kwargs):
         data = {}
+        flat = kwargs.pop('flat', False)
         for aggregate in args:
             data[aggregate.identifier] = aggregate.aggregate(self._values)
         for key, aggregate in kwargs.items():
             data[key] = aggregate.aggregate(self._values)
+        if flat:
+            data = list(data.values())
         return data
 
     def values(self, *args):

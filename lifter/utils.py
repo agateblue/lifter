@@ -1,6 +1,19 @@
 
 import operator
 
+
+class IterableAttr(object):
+
+    def __init__(self, iterable, key):
+        self._items = [item[key] for item in iterable]
+
+    def __eq__(self, other):
+        return other in self._items
+
+    def __getitem__(self, key):
+        return self.__class__(self._items, key)
+
+
 def attrgetter(*items):
 
     if any(not isinstance(item, str) for item in items):
@@ -21,9 +34,13 @@ def resolve_attr(obj, attr):
         try:
             obj = getattr(obj, name)
         except AttributeError:
-            obj = obj[name]
-        except KeyError:
-            raise ValueError('Object {0} has no attribute or key "{1}"'.format(obj, key))
+            try:
+                try:
+                    obj = obj[name]
+                except TypeError:
+                    obj = IterableAttr(obj, name)
+            except (KeyError, TypeError):
+                raise ValueError('Object {0} has no attribute or key "{1}"'.format(obj, name))
     return obj
 
 def unique_everseen(seq):
