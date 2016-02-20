@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
+from random import sample
 
 from . import utils
 
@@ -66,6 +67,9 @@ class QuerySet(object):
         return len(self) > 0
 
     def order_by(self, key):
+        if key == '?':
+            return self._clone(sample(self._values, len(self)))
+
         reverse = False
         if key.startswith('-'):
             reverse = True

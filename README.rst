@@ -106,18 +106,30 @@ Of course it's totally doable in plain python. A for loop, some if statements, m
 .. code-block:: python
 
     # Getting all active 26 years old users
-    under_26 = [user for user in users if user['age'] == 26 and user['is_active']]
+    under_26 = [
+        user for user in users
+        if user['age'] == 26 and user['is_active']
+    ]
 
     # Getting names and emails of inactive users
-    inactive_mail_and_names = [(user['name'], user['email']) for user in users if not user['is_active']]
+    inactive_mail_and_names = [
+        (user['name'], user['email']) for user in users
+        if not user['is_active']
+    ]
 
     # Getting all active users except the one with brown eyes and sort them by age
-    active_without_brown_eyes = [user for user in users if user['is_active'] and not user['eye_color'] == 'brown']
+    active_without_brown_eyes = [
+        user for user in users
+        if user['is_active'] and not user['eye_color'] == 'brown'
+    ]
     active_without_brown_eyes_sorted = sorted(active_without_brown_eyes, key=lambda v: v['age'])
 
     # minimum and average women age
     from statistics import mean
-    women_ages = [user['age'] for user in users if user['gender'] == 'female']
+    women_ages = [
+        user['age'] for user in users
+        if user['gender'] == 'female'
+    ]
     women_average_age = mean(women_ages)
     minimum_woman_age = min(women_ages)
 
@@ -139,9 +151,12 @@ Let's see if we can do better using lifter:
     inactive_mail_and_names = manager.filter(is_active=False).values_list('name', 'email')
 
     # Getting all active users except the one with brown eyes and sort them by age
-    active_without_brown_eyes_sorted = manager.filter(is_active=True)\
-                                              .exclude(eye_color='brown')\
-                                              .order_by('age')
+    active_without_brown_eyes_sorted = (
+        manager
+        .filter(is_active=True)
+        .exclude(eye_color='brown')
+        .order_by('age')
+    )
 
     # average women age
     women_average_age = manager.filter(gender='female').aggregate(lifter.Avg('age'), lifter.Min('age'))
@@ -297,6 +312,11 @@ You can prefix the attribute with `-` to reverse the ordering:
 
     # will return older users first
     manager.all().order_by('-age')
+
+.. code-block:: python
+
+    # will return random ordered queryset
+    manager.all().order_by('?')
 
 count
 +++++
