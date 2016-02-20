@@ -9,5 +9,5 @@ from . import lookups
 from .lookups import *
 from .aggregates import *
 
-def load(values):
-    return Manager(values)
+def load(values, *args, **kwargs):
+    return Manager(values, *args, **kwargs)
