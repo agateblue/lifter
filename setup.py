@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import lifter
 
 try:
     from setuptools import setup
@@ -24,7 +25,7 @@ test_requirements = [
 
 setup(
     name='lifter',
-    version='0.1.0',
+    version=lifter.__version__,
     description="A lightweight query engine for Python iterables, inspired by Django ORM",
     long_description=readme + '\n\n' + history,
     author="Eliot Berriot",
