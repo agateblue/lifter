@@ -307,6 +307,11 @@ You can prefix the attribute with `-` to reverse the ordering:
     # will return older users first
     manager.all().order_by('-age')
 
+.. code-block:: python
+
+    # will return random ordered queryset
+    manager.all().order_by('?')
+
 count
 +++++
 
