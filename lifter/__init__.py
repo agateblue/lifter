@@ -2,7 +2,7 @@
 
 __author__ = 'Eliot Berriot'
 __email__ = 'contact@eliotberriot.com'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 from .query import Manager, DoesNotExist, MultipleObjectsReturned
 from . import lookups

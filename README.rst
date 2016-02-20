@@ -9,20 +9,17 @@ lifter
         :target: https://travis-ci.org/EliotBerriot/lifter
 
 
-
-.. warning::
-
-    This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
-    Contributions are welcome :)
-
-.. note::
-
-    The query api will probably be under a lot of changes soon. If you want to be part of the discussion
-    and contribute, please refer to the `corresponding issue <https://github.com/EliotBerriot/lifter/issues/15>`_.
-
 A lightweight query engine for Python iterables, inspired by Django ORM.
 
 * Free software: BSD license
+
+
+**Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
+Contributions are welcome :)
+
+The query api will probably be under a lot of changes soon. If you want to be part of the discussion
+and contribute, please refer to the `corresponding issue <https://github.com/EliotBerriot/lifter/issues/15>`_.
+
 
 .. contents:: :depth: 1
 
