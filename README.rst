@@ -41,45 +41,45 @@ Consider the following list of users:
     users = [
         {
             "id": "56c4e39a3e05a86e9f759ba8",
-            "is_active": true,
+            "is_active": True,
             "number_of_children": 0,
             "age": 35,
             "eye_color": "brown",
             "name": "Bernard",
             "gender": "male",
-            "has_beard": false,
+            "has_beard": False,
             "email": "bernard@blackbooks.com",
-            "own_bookshop": true,
+            "own_bookshop": True,
             "company": {
                 "name": "blackbooks"
             }
         },
         {
             "id": "56c4e39a3d08fcd553cb73b9",
-            "is_active": true,
+            "is_active": True,
             "number_of_children": 0,
             "age": 34,
             "eye_color": "brown",
             "name": "Manny",
             "gender": "male",
-            "has_beard": true,
+            "has_beard": True,
             "email": "manny@blackbooks.com",
-            "own_bookshop": false,
+            "own_bookshop": False,
             "company": {
                 "name": "blackbooks"
             }
         },
         {
             "id": "56c4e39a1f9b6f64db8a1b98",
-            "is_active": true,
+            "is_active": True,
             "number_of_children": 0,
             "age": 35,
             "eye_color": "brown",
             "name": "Fran",
             "gender": "female",
-            "has_beard": false,
+            "has_beard": False,
             "email": "fran@blackbooks.com",
-            "own_bookshop": false,
+            "own_bookshop": False,
             "company": {
                 "name": "blackbooks"
             }
