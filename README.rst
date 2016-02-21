@@ -30,6 +30,7 @@ Features
 * API similar to Django querysets_
 * Lightweight: absolutely no dependencies
 * Tested and working on Python 2.7 to Python 3.5
+
 .. _querysets: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
 
 Why lifter?
