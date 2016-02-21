@@ -45,6 +45,11 @@ class TestBase(unittest.TestCase):
         self.dict_manager = lifter.load(self.DICTS, queryset_class=tiny.TinyQuerySet)
 
 class TestQueries(TestBase):
+    
+    def test_model(self):
+        TestModel = tiny.Model('TestModel')
+        manager = TestModel.load(self.OBJECTS)
+        self.assertEqual(manager.filter(TestModel.a == 1), self.OBJECTS[:2])
 
     def test_default_order(self):
         self.assertEqual(list(self.manager.all()), self.OBJECTS)

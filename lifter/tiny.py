@@ -271,6 +271,21 @@ class TinyQuerySet(object):
     def exists(self):
         return len(self) > 0
 
+class BaseModelMeta(type):
+    def __getattr__(cls, key):
+        return getattr(q, key)
+
+class BaseModel(object):
+    __metaclass__ = BaseModelMeta
+
+    @classmethod
+    def load(cls, values):
+        return TinyQuerySet(values)
+
+def Model(name):
+    return BaseModelMeta(name, (BaseModel,), {})
+
+
 q = Query()  # filter, exclude, get
 p = Path()  # order_by, values, values_list
 a = Aggregation()  # aggregate
