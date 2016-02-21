@@ -498,7 +498,7 @@ Available lookups are:
 Contributing
 ------------
 
-Bug reports, feature requests and pull requests, are welcome, but before sumitting anything,
+Bug reports, feature requests and pull requests, are welcome, but before submitting anything,
 please read `CONTRIBUTING.rst <./CONTRIBUTING.rst>`_.
 
 Credits
