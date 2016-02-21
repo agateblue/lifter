@@ -156,7 +156,10 @@ Let's see if we can do better using lifter:
     )
 
     # average women age
-    women_average_age = manager.filter(gender='female').aggregate(lifter.Avg('age'), lifter.Min('age'))
+    women_average_age, women_min_age = (
+        manager.filter(gender='female')
+                .aggregate(lifter.Avg('age'), lifter.Min('age'), flat=True)
+    )
 
 Better, isn't it?
 
