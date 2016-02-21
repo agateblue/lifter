@@ -317,8 +317,3 @@ class BaseModel(object):
 
 def Model(name):
     return BaseModelMeta(name, (BaseModel,), {})
-
-
-# q = Query()  # filter, exclude, get
-p = Path()  # order_by, values, values_list
-# a = Aggregation()  # aggregate
