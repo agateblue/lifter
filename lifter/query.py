@@ -4,7 +4,7 @@ from collections import OrderedDict
 from random import sample
 
 from . import utils
-
+from . import lookups
 
 REPR_OUTPUT_SIZE = 10
 
@@ -16,6 +16,68 @@ class DoesNotExist(ValueError):
 class MultipleObjectsReturned(ValueError):
     pass
 
+class Q(object):
+    AND = 'AND'
+    OR = 'OR'
+    default = AND
+
+    def __init__(self, **kwargs):
+        self.children = []
+        self.field, self.lookup = None, None
+        self.negated = False
+        self.operator = self.default
+
+        if len(kwargs) > 1:
+            self.children = [Q(**{field: lookup}) for field, lookup in kwargs.items()]
+        elif len(kwargs) == 1:
+            self.field, self.lookup = list(kwargs.items())[0]
+            if not hasattr(self.lookup, '__call__'):
+                # we convert the argument value to a callable lookup for easier handling in matching
+                self.lookup = lookups.exact(self.lookup)
+
+    @property
+    def operator_matcher(self):
+        if self.operator == self.AND:
+            return all
+        return any
+
+    def match(self, obj):
+        if self.children:
+            # The query contain subqueries, we just compile their result
+            do_match = self.operator_matcher([child.match(obj) for child in self.children])
+        else:
+            getter = utils.attrgetter(self.field)
+            do_match = self.lookup(getter(obj))
+
+        if self.negated:
+            return not do_match
+        return do_match
+
+    def _clone(self):
+        clone = self.__class__()
+        clone.children = self.children
+        clone.field, clone.lookup = self.field, self.lookup
+        return clone
+
+    def negate(self):
+        self.negated = not self.negated
+
+    def _combine(self, other, operator):
+        new_query = self.__class__()
+        new_query.operator = operator
+        new_query.children = [self, other]
+        return new_query
+
+    def __or__(self, other):
+        return self._combine(other, self.OR)
+
+    def __and__(self, other):
+        return self._combine(other, self.AND)
+
+    def __invert__(self):
+        query = self._clone()
+        query.negate()
+        return query
 
 class QuerySet(object):
     def __init__(self, values):
@@ -43,25 +105,6 @@ class QuerySet(object):
         if len(data) > REPR_OUTPUT_SIZE:
             data[-1] = "...(remaining elements truncated)..."
         return '<QuerySet %r>' % data
-
-    def _build_filter(self, **kwargs):
-        """build a single filter function used to match arbitrary object"""
-
-        def object_filter(obj):
-            for key, value in kwargs.items():
-                # we replace dango-like lookup by dots, so attrgetter can do his job
-
-                getter = utils.attrgetter(key)
-                if hasattr(value, '__call__'):
-                    # User passed a callable for a custom comparison
-                    if not value(getter(obj)):
-                        return False
-                else:
-                    if not getter(obj) == value:
-                        return False
-            return True
-
-        return object_filter
 
     def exists(self):
         return len(self) > 0
@@ -94,6 +137,15 @@ class QuerySet(object):
             return self._values[-1]
         except IndexError:
             return None
+
+
+    def _build_filter(self, **kwargs):
+        """build a single filter function used to match arbitrary object"""
+        query = Q(**kwargs)
+        def object_filter(obj):
+            return query.match(obj)
+
+        return object_filter
 
     def filter(self, **kwargs):
         _filter = self._build_filter(**kwargs)
