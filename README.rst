@@ -5,8 +5,11 @@ lifter
 .. image:: https://img.shields.io/pypi/v/lifter.svg
         :target: https://pypi.python.org/pypi/lifter
 
-.. image:: https://img.shields.io/travis/EliotBerriot/lifter.svg
-        :target: https://travis-ci.org/EliotBerriot/lifter
+.. image:: https://travis-ci.org/EliotBerriot/lifter.svg?branch=master
+    :target: https://travis-ci.org/EliotBerriot/lifter
+
+.. image:: https://travis-ci.org/EliotBerriot/lifter.svg?branch=develop
+    :target: https://travis-ci.org/EliotBerriot/lifter
 
 
 A lightweight query engine for Python iterables, inspired by Django ORM.
