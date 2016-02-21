@@ -39,7 +39,7 @@ class Aggregation(Path):
         return 'Aggregation({})'.format(self.aggregate)
 
     def aggregate(self, data):
-        yield from self.aggregate(data)
+        return self.aggregate(data)
 
 
 class QueryImpl(object):
@@ -223,29 +223,42 @@ class TinyQuerySet(object):
             )
         )
 
-    def values_list(self, *args, flat=False):  # "*args, flat=False" is Python 3.5 specific, will use **kwargs in older versions
+    def values_list(self, *args, **kwargs):  # "*args, flat=False" is Python 3.5 specific, will use **kwargs in older versions
         if not args:
             raise ValueError('Empty values')
 
         getter = lambda val: tuple(path.get(val) for path in args)
 
-        if flat and len(args) > 1:
+        if kwargs.get('flat', False) and len(args) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
-        elif flat:
+        elif kwargs.get('flat', False):
             getter = lambda val: args[0].get(val)
 
         return self._clone(  # I believe in this case we should return raw data not query_set
             map(getter, self.data)
         )
 
-    def aggregate(self, *args, flat=False, **kwargs):  # "*args, flat=False" is Python 3.5 specific, will use **kwargs in older versions
-        data = {}  # Isn't lazy
+    def _build_aggregate(self, aggregation, key=None):
+        if key:
+            final_key = key
+        else:
+            func_name = aggregation.aggregate.__name__ if aggregation.aggregate.__name__ != '<lambda>' else key
+            final_key = '{0}__{1}'.format(str(aggregation), func_name)
+        values = (aggregation.get(val) for val in self.data)
+        return aggregation.aggregate(values), final_key
 
-        kwargs.update((str(aggregation), aggregation) for aggregation in args)
+    def aggregate(self, *args, **kwargs):
+        data = {}  # Isn't lazy
+        flat = kwargs.pop('flat', False)
+
+        for aggregation in args:
+            aggregate, key = self._build_aggregate(aggregation)
+            data[key] = aggregate
 
         for key, aggregation in kwargs.items():
-            values = (aggregation.get(val) for val in self.data)
-            data[key] = aggregation.aggregate(values)
+            aggregate, key = self._build_aggregate(aggregation, key)
+            data[key] = aggregate
+
 
         if flat:
             return list(data.values())  # Isn't lazy

@@ -12,7 +12,7 @@ import random
 import sys
 import unittest
 import mock
-
+from statistics import mean
 import lifter
 from lifter import tiny
 
@@ -255,60 +255,69 @@ class TestQueries(TestBase):
     #     ]
     #     manager = lifter.load(companies)
     #     self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
-#
-# class TestLookups(TestBase):
-#     def test_gt(self):
-#         self.assertEqual(self.manager.filter(order=lifter.lookups.gt(3)), [self.OBJECTS[3]])
-#
-#     def test_gte(self):
-#         self.assertEqual(self.manager.filter(order=lifter.lookups.gte(3)), [self.OBJECTS[1], self.OBJECTS[3]])
-#
-#     def test_lt(self):
-#         self.assertEqual(self.manager.filter(order=lifter.lookups.lt(3)), [self.OBJECTS[0], self.OBJECTS[2]])
-#
-#     def test_lte(self):
-#         self.assertEqual(self.manager.filter(order=lifter.lookups.lte(3)), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
-#
-#     def test_startswith(self):
-#         self.assertEqual(self.manager.filter(label=lifter.lookups.startswith('a')), [self.OBJECTS[0], self.OBJECTS[1]])
-#
-#     def test_endswith(self):
-#         self.assertEqual(self.manager.filter(label=lifter.lookups.endswith('s')), [self.OBJECTS[1], self.OBJECTS[2]])
-#
-#     def test_value_in(self):
-#         self.assertEqual(self.manager.filter(label=lifter.lookups.value_in(['alabama', 'arkansas'])), [self.OBJECTS[0], self.OBJECTS[1]])
-#
-#     def test_range(self):
-#         self.assertEqual(self.manager.filter(order=lifter.lookups.value_range(2, 3)), [self.OBJECTS[0], self.OBJECTS[1]])
-#
-#     def test_istartswith(self):
-#         self.assertEqual(self.manager.filter(surname=lifter.lookups.istartswith('c')), [self.OBJECTS[1], self.OBJECTS[3]])
-#
-#     def test_iendswith(self):
-#         self.assertEqual(self.manager.filter(surname=lifter.lookups.iendswith('t')), [self.OBJECTS[0], self.OBJECTS[3]])
-#
-#     def test_contains(self):
-#         self.assertEqual(self.manager.filter(surname=lifter.lookups.contains('Lin')), [self.OBJECTS[2]])
-#
-#     def test_icontains(self):
-#         self.assertEqual(self.manager.filter(surname=lifter.lookups.icontains('lin')), [self.OBJECTS[2], self.OBJECTS[3]])
-#
-# class TestAggregation(TestBase):
-#     def test_sum(self):
-#         self.assertEqual(self.manager.aggregate(lifter.Sum('a')), {'a__sum': 6})
-#         self.assertEqual(self.manager.aggregate(total=lifter.Sum('a')), {'total': 6})
-#
-#     def test_min(self):
-#         self.assertEqual(self.manager.aggregate(lifter.Min('a')), {'a__min': 1})
-#
-#     def test_max(self):
-#         self.assertEqual(self.manager.aggregate(lifter.Max('a')), {'a__max': 2})
-#
-#     def test_avg(self):
-#         self.assertEqual(self.manager.aggregate(lifter.Avg('a')), {'a__avg': 1.5})
-#
-#     def test_flat(self):
-#         self.assertEqual(self.manager.aggregate(lifter.Avg('a'), flat=True), [1.5])
+
+class TestLookups(TestBase):
+    def test_gt(self):
+        self.assertEqual(self.manager.filter(tiny.q.order > 3), [self.OBJECTS[3]])
+
+    def test_gte(self):
+        self.assertEqual(self.manager.filter(tiny.q.order >= 3), [self.OBJECTS[1], self.OBJECTS[3]])
+
+    def test_lt(self):
+        self.assertEqual(self.manager.filter(tiny.q.order < 3), [self.OBJECTS[0], self.OBJECTS[2]])
+
+    def test_lte(self):
+        self.assertEqual(self.manager.filter(tiny.q.order <= 3), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
+
+    def test_startswith(self):
+        self.assertEqual(self.manager.filter(tiny.q.label.test(lifter.startswith('a'))),
+                        [self.OBJECTS[0], self.OBJECTS[1]])
+
+    def test_endswith(self):
+        self.assertEqual(self.manager.filter(tiny.q.label.test(lifter.endswith('s'))),
+                        [self.OBJECTS[1], self.OBJECTS[2]])
+
+    def test_value_in(self):
+        self.assertEqual(self.manager.filter(tiny.q.label.test(lifter.value_in(['alabama', 'arkansas']))),
+                        [self.OBJECTS[0], self.OBJECTS[1]])
+
+    def test_range(self):
+        self.assertEqual(self.manager.filter(tiny.q.order.test(lifter.lookups.value_range(2, 3))),
+                        [self.OBJECTS[0], self.OBJECTS[1]])
+
+    def test_istartswith(self):
+        self.assertEqual(self.manager.filter(tiny.q.surname.test(lifter.istartswith('c'))),
+                        [self.OBJECTS[1], self.OBJECTS[3]])
+
+    def test_iendswith(self):
+        self.assertEqual(self.manager.filter(tiny.q.surname.test(lifter.iendswith('t'))),
+                        [self.OBJECTS[0], self.OBJECTS[3]])
+
+    def test_contains(self):
+        self.assertEqual(self.manager.filter(tiny.q.surname.test(lifter.contains('Lin'))),
+                        [self.OBJECTS[2]])
+
+    def test_icontains(self):
+        self.assertEqual(self.manager.filter(tiny.q.surname.test(lifter.icontains('lin'))),
+                        [self.OBJECTS[2], self.OBJECTS[3]])
+
+
+class TestAggregation(TestBase):
+    def test_sum(self):
+        self.assertEqual(self.manager.aggregate(tiny.a.a(sum)), {'a__sum': 6})
+        self.assertEqual(self.manager.aggregate(total=tiny.a.a(sum)), {'total': 6})
+
+    def test_min(self):
+        self.assertEqual(self.manager.aggregate(tiny.a.a(min)), {'a__min': 1})
+
+    def test_max(self):
+        self.assertEqual(self.manager.aggregate(tiny.a.a(max)), {'a__max': 2})
+
+    def test_mean(self):
+        self.assertEqual(self.manager.aggregate(tiny.a.a(mean)), {'a__mean': 1.5})
+
+    def test_flat(self):
+        self.assertEqual(self.manager.aggregate(tiny.a.a(mean), flat=True), [1.5])
 
 if __name__ == '__main__':
     import sys
