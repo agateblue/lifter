@@ -38,9 +38,72 @@ class TestBase(unittest.TestCase):
 
     DICTS = [o.__dict__ for o in OBJECTS]
 
+    NESTED = [
+        {
+            'name': 'Kurt',
+            'age': 66,
+            'tags': [
+                {'name': 'nice'},
+                {'name': 'friendly'},
+            ]
+        },
+        {
+            'name': 'Bill',
+            'age': 22,
+            'tags': [
+                {'name': 'friendly'},
+            ]
+        },
+    ]
+
+    NESTED_ITERABLES = [
+        {
+            'name': 'blackbooks',
+            'employees': [
+                {
+                    'name': 'Manny',
+                    'age': 33,
+                    'tags': [
+                        {'name': 'nice'},
+                        {'name': 'friendly'},
+                    ]
+                },
+                {
+                    'name': 'Fran',
+                    'age': 30,
+                    'tags': [
+                        {'name': 'cool'},
+                    ]
+                }
+            ]
+        },
+        {
+            'name': 'community',
+            'employees': [
+                {
+                    'name': 'Britta',
+                    'age': 23,
+                    'tags': [
+                        {'name': 'activist'},
+                    ]
+                },
+                {
+                    'name': 'Abed',
+                    'age': 21,
+                    'tags': [
+                        {'name': 'gifted'},
+                    ]
+                },
+            ]
+        }
+    ]
+
     def setUp(self):
         self.manager = lifter.load(self.OBJECTS)
         self.dict_manager = lifter.load(self.DICTS)
+        self.nested_manager = lifter.load(self.NESTED)
+        self.nested_iterables_manager = lifter.load(self.NESTED_ITERABLES)
+
 
 class TestQueries(TestBase):
 
@@ -75,53 +138,29 @@ class TestQueries(TestBase):
         self.assertRaises(ValueError, self.manager.filter, x="y")
         self.assertRaises(ValueError, self.dict_manager.filter, x="y")
 
-    def test_can_check_nested_iterables(self):
-        users = [
-            {
-                'name': 'Kurt',
-                'tags': [
-                    {'name': 'nice'},
-                    {'name': 'friendly'},
-                ]
-            },
-            {
-                'name': 'Bill',
-                'tags': [
-                    {'name': 'friendly'},
-                ]
-            },
-        ]
-        manager = lifter.load(users)
-        self.assertNotIn(users[1], manager.filter(tags__name='nice'))
-        self.assertRaises(ValueError, manager.filter, tags__x='y')
+    def test_can_filter_nested_iterables(self):
+        self.assertNotIn(self.NESTED[1], self.nested_manager.filter(tags__name='nice'))
+        self.assertIn(self.NESTED[0], self.nested_manager.filter(tags__name='nice'))
+        self.assertRaises(ValueError, self.nested_manager.filter, tags__x='y')
 
-        companies = [
-            {
-                'name': 'blackbooks',
-                'employees': [
-                    {
-                        'name': 'Manny',
-                        'tags': [
-                            {'name': 'nice'},
-                            {'name': 'friendly'},
-                        ]
-                    }
-                ]
-            },
-            {
-                'name': 'community',
-                'employees': [
-                    {
-                        'name': 'Britta',
-                        'tags': [
-                            {'name': 'activist'},
-                        ]
-                    }
-                ]
-            }
-        ]
-        manager = lifter.load(companies)
-        self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
+        self.assertNotIn(self.NESTED_ITERABLES[1], self.nested_iterables_manager.filter(employees__tags__name='friendly'))
+        self.assertIn(self.NESTED_ITERABLES[0], self.nested_iterables_manager.filter(employees__tags__name='friendly'))
+        self.assertRaises(ValueError, self.nested_manager.filter, employees__tags__x='y')
+
+    def test_can_exclude_nested_iterables(self):
+        self.assertNotIn(self.NESTED[0], self.nested_manager.exclude(tags__name='nice'))
+        self.assertIn(self.NESTED[1], self.nested_manager.exclude(tags__name='nice'))
+        self.assertRaises(ValueError, self.nested_manager.exclude, tags__x='y')
+
+        self.assertNotIn(self.NESTED_ITERABLES[0], self.nested_iterables_manager.exclude(employees__tags__name='friendly'))
+        self.assertIn(self.NESTED_ITERABLES[1], self.nested_iterables_manager.exclude(employees__tags__name='friendly'))
+        self.assertRaises(ValueError, self.nested_manager.exclude, employees__tags__x='y')
+
+    def test_can_get_nested_iterables(self):
+        self.assertEqual(self.NESTED[0], self.nested_manager.get(tags__name='nice'))
+        self.assertEqual(self.NESTED_ITERABLES[0], self.nested_iterables_manager.get(employees__tags__name='gifted'))
+        self.assertEqual(self.NESTED_ITERABLES[1], self.nested_iterables_manager.get(employees__name='Britta'))
+        self.assertRaises(ValueError, self.nested_manager.get, employees__tags__x='y')
 
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
