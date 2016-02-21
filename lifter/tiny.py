@@ -12,6 +12,7 @@ class Order(object):
 class Path(object):
     def __init__(self, path=None):
         self.path = path or []
+        self._reversed = False # used for order by
 
     def __getattr__(self, part):
         return self.__class__(self.path + [part])
@@ -28,18 +29,46 @@ class Path(object):
 
         return data
 
+    @property
+    def _query(self):
+        return Query(self)
 
-class Aggregation(Path):
+    def __eq__(self, other):
+        return self._query.__eq__(other)
+
+    def __ne__(self, other):
+        return self._query.__ne__(other)
+
+    def __gt__(self, other):
+        return self._query.__gt__(other)
+
+    def __ge__(self, other):
+        return self._query.__ge__(other)
+
+    def __lt__(self, other):
+        return self._query.__lt__(other)
+
+    def __le__(self, other):
+        return self._query.__le__(other)
+
+    def test(self, func):
+        return self._query.test(func)
+
+class Aggregation(object):
+    def __init__(self, path, func):
+        self.path = path
+        self.func = func
+
     def __call__(self, aggregate):
         self.aggregate = aggregate
 
         return self
 
     def __repr__(self):
-        return 'Aggregation({})'.format(self.aggregate)
+        return 'Aggregation({})'.format(self.func)
 
     def aggregate(self, data):
-        return self.aggregate(data)
+        return self.func(data)
 
 
 class QueryImpl(object):
@@ -74,10 +103,13 @@ class QueryImpl(object):
         )
 
 
-class Query(Path):
+class Query(object):
+    def __init__(self, path):
+        self.path = path
+
     def _generate_test(self, test, hashval):
         def impl(value):
-            return test(self.get(value))
+            return test(self.path.get(value))
 
         return QueryImpl(impl, hashval)
 
@@ -86,37 +118,37 @@ class Query(Path):
 
     def __eq__(self, other):
         return self._generate_test(
-            lambda val: val == other, ('==', self, other)
+            lambda val: val == other, ('==', self.path, other)
         )
 
     def __ne__(self, other):
         return self._generate_test(
-            lambda val: val != other, ('!=', self, other)
+            lambda val: val != other, ('!=', self.path, other)
         )
 
     def __gt__(self, other):
         return self._generate_test(
-            lambda val: val > other, ('>', self, other)
+            lambda val: val > other, ('>', self.path, other)
         )
 
     def __ge__(self, other):
         return self._generate_test(
-            lambda val: val >= other, ('>=', self, other)
+            lambda val: val >= other, ('>=', self.path, other)
         )
 
     def __lt__(self, other):
         return self._generate_test(
-            lambda val: val < other, ('<', self, other)
+            lambda val: val < other, ('<', self.path, other)
         )
 
     def __le__(self, other):
         return self._generate_test(
-            lambda val: val <= other, ('<=', self, other)
+            lambda val: val <= other, ('<=', self.path, other)
         )
 
     def test(self, func):
         return self._generate_test(
-            func, ('test', self, func)
+            func, ('test', self.path, func)
         )
 
 
@@ -204,9 +236,8 @@ class TinyQuerySet(object):
     def count(self):
         return len(list(self.data))
 
-    def order_by(self, path, order=Order.ASC):
-        reverse = order == Order.DESC
-        if path == '?':
+    def order_by(self, path, reverse=False):
+        if isinstance(path, str) and path == '?':
             # Random ordering
             return self._clone(sample(self.data, len(self.data)))
 
@@ -242,20 +273,22 @@ class TinyQuerySet(object):
         if key:
             final_key = key
         else:
-            func_name = aggregation.aggregate.__name__ if aggregation.aggregate.__name__ != '<lambda>' else key
-            final_key = '{0}__{1}'.format(str(aggregation), func_name)
-        values = (aggregation.get(val) for val in self.data)
+            func_name = aggregation.func.__name__ if aggregation.func.__name__ != '<lambda>' else key
+            final_key = '{0}__{1}'.format(str(aggregation.path), func_name)
+        values = (aggregation.path.get(val) for val in self.data)
         return aggregation.aggregate(values), final_key
 
     def aggregate(self, *args, **kwargs):
         data = {}  # Isn't lazy
         flat = kwargs.pop('flat', False)
 
-        for aggregation in args:
+        for path, func in args:
+            aggregation = Aggregation(path, func)
             aggregate, key = self._build_aggregate(aggregation)
             data[key] = aggregate
-
-        for key, aggregation in kwargs.items():
+        for key, conf in kwargs.items():
+            path, func = conf
+            aggregation = Aggregation(path, func)
             aggregate, key = self._build_aggregate(aggregation, key)
             data[key] = aggregate
 
@@ -273,7 +306,7 @@ class TinyQuerySet(object):
 
 class BaseModelMeta(type):
     def __getattr__(cls, key):
-        return getattr(q, key)
+        return getattr(p, key)
 
 class BaseModel(object):
     __metaclass__ = BaseModelMeta
@@ -286,6 +319,6 @@ def Model(name):
     return BaseModelMeta(name, (BaseModel,), {})
 
 
-q = Query()  # filter, exclude, get
+# q = Query()  # filter, exclude, get
 p = Path()  # order_by, values, values_list
-a = Aggregation()  # aggregate
+# a = Aggregation()  # aggregate
