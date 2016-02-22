@@ -50,6 +50,11 @@ class TestQueries(TestBase):
         manager = TestModel.load(self.OBJECTS)
         self.assertEqual(manager.filter(TestModel.a == 1), self.OBJECTS[:2])
 
+    def test_can_match_object(self):
+        query = TestModel.order == 1
+        self.assertTrue(query.match(self.OBJECTS[2]))
+        self.assertFalse(query.match(self.OBJECTS[3]))
+
     def test_default_order(self):
         self.assertEqual(list(self.manager.all()), self.OBJECTS)
         self.assertEqual(list(self.dict_manager.all()), self.DICTS)

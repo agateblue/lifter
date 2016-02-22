@@ -78,8 +78,11 @@ class Aggregation(object):
 
 class QueryImpl(object):
     def __init__(self, test, hashval):
-        self.test = test
+        self._test = test
         self.hashval = hashval
+
+    def match(self, val):
+        return self._test(val)
 
     def __repr__(self):
         template = 'QueryImpl({0} {1})' if len(self.hashval) == 2 else 'QueryImpl({1} {0} {2})'
@@ -87,7 +90,7 @@ class QueryImpl(object):
         return template.format(*self.hashval)
 
     def __call__(self, val):
-        return self.test(val)
+        return self.match(val)
 
     def __and__(self, other):
         return QueryImpl(
@@ -155,7 +158,6 @@ class Query(object):
         return self._generate_test(
             func, ('test', self.path, func)
         )
-
 
     # __contains__, matches, search, any, all, exists probably
 
