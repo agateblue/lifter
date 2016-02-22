@@ -14,7 +14,6 @@ import unittest
 import mock
 from statistics import mean
 import lifter
-from lifter import tiny
 
 
 class TestObject(object):
@@ -41,10 +40,10 @@ class TestBase(unittest.TestCase):
     DICTS = [o.__dict__ for o in OBJECTS]
 
     def setUp(self):
-        self.manager = lifter.load(self.OBJECTS, queryset_class=tiny.TinyQuerySet)
-        self.dict_manager = lifter.load(self.DICTS, queryset_class=tiny.TinyQuerySet)
+        self.manager = lifter.load(self.OBJECTS)
+        self.dict_manager = lifter.load(self.DICTS)
 
-TestModel = tiny.Model('TestModel')
+TestModel = lifter.models.Model('TestModel')
 
 class TestQueries(TestBase):
 
@@ -64,14 +63,14 @@ class TestQueries(TestBase):
         self.assertEqual(self.manager.filter(TestModel.a == 1), self.OBJECTS[:2])
 
     def test_queryset_is_lazy(self):
-        with mock.patch('lifter.tiny.TinyQuerySet._fetch_all') as fetch:
+        with mock.patch('lifter.query.QuerySet._fetch_all') as fetch:
             qs = self.manager.all().filter(TestModel.order == 3)
             fetch.assert_not_called()
             self.assertEqual(qs._data, [])
 
         self.assertEqual(qs, [self.OBJECTS[1]])
 
-        with mock.patch('lifter.tiny.TinyQuerySet._fetch_all') as fetch:
+        with mock.patch('lifter.query.QuerySet._fetch_all') as fetch:
             self.assertEqual(qs, [self.OBJECTS[1]])
             self.assertEqual(qs, [self.OBJECTS[1]])
             self.assertEqual(qs, [self.OBJECTS[1]])
@@ -132,7 +131,7 @@ class TestQueries(TestBase):
         self.assertIsNotNone(self.dict_manager.filter(TestModel.a == 1).last())
 
     def test_ordering(self):
-        TestModel = tiny.Model('TestModel')
+        TestModel = lifter.models.Model('TestModel')
         self.assertEqual(self.manager.order_by(TestModel.order)[:2], [self.OBJECTS[2], self.OBJECTS[0]])
         self.assertEqual(self.manager.order_by(TestModel.order, reverse=True)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
 
