@@ -92,7 +92,7 @@ class TestQueries(TestBase):
             },
         ]
         manager = lifter.load(users)
-        self.assertNotIn(users[1], manager.filter(tags__name='nice'))
+        self.assertEqual([users[0]], manager.filter(tags__name='nice'))
         self.assertRaises(ValueError, manager.filter, tags__x='y')
 
         companies = [
@@ -118,10 +118,25 @@ class TestQueries(TestBase):
                         ]
                     }
                 ]
-            }
+            },
+            {
+                'name': 'narcos',
+                'employees': [
+                    {
+                        'name': 'pablo escobar',
+                        'tags': [
+                            {'name': 'drug dealer'},
+                            {'name': 'activist'},
+                        ]
+                    }
+                ]
+            },
         ]
         manager = lifter.load(companies)
-        self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
+        self.assertEqual([companies[0]], manager.filter(employees__tags__name='friendly'))
+        self.assertEqual([companies[0]], manager.filter(employees__tags__name=lifter.startswith('fr')))
+        self.assertEqual([companies[1], companies[2]], manager.filter(employees__tags__name=lifter.icontains('act')))
+        self.assertEqual([companies[1], companies[2]], manager.filter(employees__tags={'name': 'activist'}))
 
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(a=1), self.OBJECTS[2:])
@@ -235,6 +250,70 @@ class TestQueries(TestBase):
         self.assertEqual(self.manager.values_list('a', flat=True), [1, 1, 2, 2])
         self.assertEqual(self.manager.values_list('a', flat=True).distinct(), [1, 2])
         self.assertEqual(self.manager.values_list('parent', flat=True).distinct(), self.PARENTS)
+
+class TestQObjects(TestBase):
+
+    def test_q_object_cast_kwargs_to_lookup_if_needed(self):
+        query = lifter.Q(name='test')
+        self.assertTrue(isinstance(query.lookup, lifter.exact))
+
+    def test_q_object_can_match_objects(self):
+        matching = {'name': 'test'}
+        not_matching = {'name': 'manny'}
+
+        query = lifter.Q(name='test')
+
+        self.assertTrue(query.match(matching))
+        self.assertFalse(query.match(not_matching))
+
+    def test_q_object_can_match_objects_using_lookup(self):
+        matching = {'name': 'test'}
+        not_matching = {'name': 'manny'}
+
+        query = lifter.Q(name=lifter.startswith('te'))
+
+        self.assertTrue(query.match(matching))
+        self.assertFalse(query.match(not_matching))
+
+    def test_can_invert_q_object(self):
+        matching = {'name': 'test'}
+        not_matching = {'name': 'manny'}
+
+        query = ~lifter.Q(name='test')
+
+        self.assertFalse(query.match(matching))
+        self.assertTrue(query.match(not_matching))
+
+    def test_can_combine_q_objects_or(self):
+        matching1 = {'name': 'test'}
+        matching2 = {'name': 'bernard'}
+        not_matching = {'name': 'manny'}
+
+        query = lifter.Q(name='test') | lifter.Q(name='bernard')
+
+        self.assertTrue(query.match(matching1))
+        self.assertTrue(query.match(matching2))
+        self.assertFalse(query.match(not_matching))
+
+        query = query | lifter.Q(name='manny')
+
+        self.assertTrue(query.match(matching1))
+        self.assertTrue(query.match(matching2))
+        self.assertTrue(query.match(not_matching))
+
+    def test_can_combine_q_objects_and(self):
+        matching = {'name': 'test'}
+        not_matching1 = {'name': 'bernard'}
+        not_matching2 = {'name': 'manny'}
+
+        query = lifter.Q(name=lifter.contains('e')) & lifter.Q(name=lifter.startswith('t'))
+
+        self.assertTrue(query.match(matching))
+        self.assertFalse(query.match(not_matching1))
+        self.assertFalse(query.match(not_matching2))
+
+
+
 
 class TestLookups(TestBase):
     def test_gt(self):

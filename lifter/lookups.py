@@ -1,3 +1,4 @@
+from . import utils
 
 class BaseLookup(object):
     def __call__(self, value):
@@ -9,6 +10,10 @@ class BaseLookup(object):
 class OneValueLookup(BaseLookup):
     def __init__(self, value):
         self.reference_value = value
+
+class exact(OneValueLookup):
+    def lookup(self, value):
+        return value == self.reference_value
 
 class gt(OneValueLookup):
     """Greater than"""
