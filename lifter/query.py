@@ -1,170 +1,388 @@
-# -*- coding: utf-8 -*-
-
-from collections import OrderedDict
+import itertools
+from collections import Iterator
 from random import sample
 
+from . import exceptions
 from . import utils
-
 
 REPR_OUTPUT_SIZE = 10
 
+class Path(object):
+    def __init__(self, path=None):
+        self.path = path or []
+        self._reversed = False # used for order by
 
-class DoesNotExist(ValueError):
-    pass
+    def __getattr__(self, part):
+        return self.__class__(self.path + [part])
 
+    __getitem__ = __getattr__
 
-class MultipleObjectsReturned(ValueError):
-    pass
+    def __str__(self):
+        return '.'.join(self.path)
 
+    def get(self, data):
+        for part in self.path:
+            getter = utils.attrgetter(part)
+            data = getter(data)
 
-class QuerySet(object):
-    def __init__(self, values):
-        self._values = list(values)
+        return data
 
-    def __iter__(self):
-        for value in self._values:
-            yield value
-        raise StopIteration
-
-    def __len__(self):
-        return len(self._values)
-
-    def __getitem__(self, i):
-        return self._values[i]
+    @property
+    def _query(self):
+        return Query(self)
 
     def __eq__(self, other):
-        return self._values == list(other)
+        return self._query.__eq__(other)
+
+    def __ne__(self, other):
+        return self._query.__ne__(other)
+
+    def __gt__(self, other):
+        return self._query.__gt__(other)
+
+    def __ge__(self, other):
+        return self._query.__ge__(other)
+
+    def __lt__(self, other):
+        return self._query.__lt__(other)
+
+    def __le__(self, other):
+        return self._query.__le__(other)
+
+    def test(self, func):
+        return self._query.test(func)
+
+class Aggregation(object):
+    def __init__(self, path, func):
+        self.path = path
+        self.func = func
+
+    def __call__(self, aggregate):
+        self.aggregate = aggregate
+
+        return self
+
+    def __repr__(self):
+        return 'Aggregation({})'.format(self.func)
+
+    def aggregate(self, data):
+        return self.func(data)
+
+
+class QueryImpl(object):
+    def __init__(self, test, hashval):
+        self.test = test
+        self.hashval = hashval
+
+    def __repr__(self):
+        template = 'QueryImpl({0} {1})' if len(self.hashval) == 2 else 'QueryImpl({1} {0} {2})'
+
+        return template.format(*self.hashval)
+
+    def __call__(self, val):
+        return self.test(val)
+
+    def __and__(self, other):
+        return QueryImpl(
+            lambda val: self(val) and other(val),
+            ('&', self, other)
+        )
+
+    def __or__(self, other):
+        return QueryImpl(
+            lambda val: self(val) or other(val),
+            ('|', self, other)
+        )
+
+    def __invert__(self):
+        return QueryImpl(
+            lambda val: not self(val),
+            ('not', self, '')
+        )
+
+
+class Query(object):
+    def __init__(self, path):
+        self.path = path
+
+    def _generate_test(self, test, hashval):
+        def impl(value):
+            return test(self.path.get(value))
+
+        return QueryImpl(impl, hashval)
+
+    def __call__(self, callable):
+        raise NotImplementedError()
+
+    def __eq__(self, other):
+        return self._generate_test(
+            lambda val: val == other, ('==', self.path, other)
+        )
+
+    def __ne__(self, other):
+        return self._generate_test(
+            lambda val: val != other, ('!=', self.path, other)
+        )
+
+    def __gt__(self, other):
+        return self._generate_test(
+            lambda val: val > other, ('>', self.path, other)
+        )
+
+    def __ge__(self, other):
+        return self._generate_test(
+            lambda val: val >= other, ('>=', self.path, other)
+        )
+
+    def __lt__(self, other):
+        return self._generate_test(
+            lambda val: val < other, ('<', self.path, other)
+        )
+
+    def __le__(self, other):
+        return self._generate_test(
+            lambda val: val <= other, ('<=', self.path, other)
+        )
+
+    def test(self, func):
+        return self._generate_test(
+            func, ('test', self.path, func)
+        )
+
+
+    # __contains__, matches, search, any, all, exists probably
+
+def lookup_to_path(lookup):
+    path = Path()
+    for part in lookup.replace('__', '.').split('.'):
+        path = getattr(path, part)
+    return path
+
+class QuerySet(object):
+    def __init__(self, data):
+        if isinstance(data, Iterator):
+            self._iter_data = data
+            self._data = []
+        else:
+            self._iter_data = None
+            self._data = data
+
+    def __repr__(self):
+        suffix = ''
+        if len(self.data) > REPR_OUTPUT_SIZE:
+            suffix = " ...(remaining elements truncated)..."
+        return '<QuerySet {0}{1}>'.format(self.data[:REPR_OUTPUT_SIZE], suffix)
+
+    @property
+    def __data(self):  # pretty ugly
+        if self._iter_data:
+            for val in self._iter_data:
+                self._data.append(val)
+
+                yield val
+
+        self._iter_data = None
+
+    @property
+    def data(self):
+        if self._data:
+            return self._data
+        return self._fetch_all()
+
+    def _fetch_all(self):
+        self._data = [item for item in self.iterator()]
+        return self._data
+
+    def iterator(self):
+        return itertools.chain(self._data, self.__data)
+
+    def __eq__(self, other):
+        return self.data == other
+
+    def __len__(self):
+        return len(self.data)
+
+    def __iter__(self):
+        for value in self.data:
+            yield value
+
+    def __getitem__(self, index):
+        return self.data[index]
 
     def _clone(self, new_values):
         return self.__class__(new_values)
 
-    def __repr__(self):
-        data = list(self[:REPR_OUTPUT_SIZE + 1])
-        if len(data) > REPR_OUTPUT_SIZE:
-            data[-1] = "...(remaining elements truncated)..."
-        return '<QuerySet %r>' % data
-
-    def _build_filter(self, **kwargs):
-        """build a single filter function used to match arbitrary object"""
-
-        def object_filter(obj):
-            for key, value in kwargs.items():
-                # we replace dango-like lookup by dots, so attrgetter can do his job
-
-                getter = utils.attrgetter(key)
-                if hasattr(value, '__call__'):
-                    # User passed a callable for a custom comparison
-                    if not value(getter(obj)):
-                        return False
-                else:
-                    if not getter(obj) == value:
-                        return False
-            return True
-
-        return object_filter
-
-    def exists(self):
-        return len(self) > 0
-
-    def order_by(self, key):
-        if key == '?':
-            return self._clone(sample(self._values, len(self)))
-
-        reverse = False
-        if key.startswith('-'):
-            reverse = True
-            key = key[1:]
-
-        return self._clone(sorted(self._values, key=utils.attrgetter(key), reverse=reverse))
-
     def all(self):
-        return self._clone(self._values)
+        return self._clone(self.data)
 
-    def count(self):
-        return len(self)
+    def get(self, query=None, **kwargs):
+        final_query = self.build_query(query, **kwargs)
+        matches = list(filter(final_query, iter(self.data)))
+        if len(matches) == 0:
+            raise exceptions.DoesNotExist()
+        if len(matches) > 1:
+            raise exceptions.MultipleObjectsReturned()
+        return matches[0]
 
     def first(self):
         try:
-            return self._values[0]
+            return self.data[0]
         except IndexError:
             return None
 
     def last(self):
         try:
-            return self._values[-1]
+            return self.data[-1]
         except IndexError:
             return None
 
-    def filter(self, **kwargs):
-        _filter = self._build_filter(**kwargs)
-        return self._clone(filter(_filter, self._values))
+    def build_query(self, query=None, **kwargs):
+        if not query and not kwargs:
+            raise ValueError('You need to provide at least a query or some keyword arguments')
 
-    def exclude(self, **kwargs):
-        _filter = self._build_filter(**kwargs)
-        return self._clone(filter(lambda v: not _filter(v), self._values))
+        kwargs_query = self.build_query_from_kwargs(**kwargs)
+        if kwargs_query and query:
+            final_query = query & kwargs_query
+        elif kwargs_query:
+            final_query = kwargs_query
+        else:
+            final_query = query
 
-    def get(self, **kwargs):
+        return final_query
 
-        matches = self.filter(**kwargs)
-        if len(matches) == 0:
-            raise DoesNotExist()
-        if len(matches) > 1:
-            raise MultipleObjectsReturned()
-        return matches[0]
+    def build_query_from_kwargs(self, **kwargs):
+        """Convert django-s like lookup to SQLAlchemy ones"""
+        query = None
+        for lookup, value in kwargs.items():
+            path = lookup_to_path(lookup)
 
-    def aggregate(self, *args, **kwargs):
-        data = {}
-        flat = kwargs.pop('flat', False)
-        for aggregate in args:
-            data[aggregate.identifier] = aggregate.aggregate(self._values)
-        for key, aggregate in kwargs.items():
-            data[key] = aggregate.aggregate(self._values)
-        if flat:
-            data = list(data.values())
-        return data
+            if hasattr(value, '__call__'):
+                q = path.test(value)
+            else:
+                q = path == value
+
+            if query:
+                query = query & q
+            else:
+                query = q
+        return query
+
+    def filter(self, query=None, **kwargs):
+        final_query = self.build_query(query, **kwargs)
+
+        return self._clone(filter(final_query, self.data))
+
+    def exclude(self, query=None, **kwargs):
+        final_query = self.build_query(query, **kwargs)
+
+        return self._clone(filter(lambda val: not final_query(val), self.data))
+
+    def count(self):
+        return len(list(self.data))
+
+    def order_by(self, path, reverse=False):
+        if isinstance(path, str):
+            if path == '?':
+                # Random ordering
+                return self._clone(sample(self.data, len(self.data)))
+
+            if path.startswith('-'):
+                reverse = True
+                path = path[1:]
+
+            path = self.arg_to_path(path)
+
+        def create_generator():
+            return sorted(self.data, key=path.get, reverse=reverse) # sorted is not lazy
+
+        return self._clone(create_generator())
+
+    def arg_to_path(self, arg):
+        path = arg
+        if isinstance(arg, str):
+            path = lookup_to_path(arg)
+        return path
 
     def values(self, *args):
-        def getter(obj):
-            data = {}
-            for arg in args:
-                g = utils.attrgetter(arg)
-                data[arg] = g(obj)
-            return data
-        all_values = [getter(obj) for obj in self._values]
-        return self._clone(all_values)
+        if not args:
+            raise ValueError('Empty values')
+
+        final_paths = [self.arg_to_path(arg) for arg in args]
+
+        return self._clone(  # I believe in this case we should return raw data not query_set
+            map(
+                lambda val: {str(path):path.get(val) for path in final_paths},
+                self.data
+            )
+        )
 
     def values_list(self, *args, **kwargs):
-        flat = kwargs.get('flat', False)
-        if flat and len(args) > 1:
+        if not args:
+            raise ValueError('Empty values')
+
+        final_paths = [self.arg_to_path(arg) for arg in args]
+
+        getter = lambda val: tuple(path.get(val) for path in final_paths)
+
+        if kwargs.get('flat', False) and len(final_paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
+        elif kwargs.get('flat', False):
+            getter = lambda val: final_paths[0].get(val)
 
-        def getter(obj):
-            if flat:
-                return utils.attrgetter(args[0])(obj)
-            return tuple((utils.attrgetter(arg)(obj) for arg in args))
+        return self._clone(  # I believe in this case we should return raw data not query_set
+            map(getter, self.data)
+        )
 
-        all_values = list([getter(obj) for obj in self._values])
-        return self._clone(all_values)
+    def _build_aggregate(self, aggregation, function_name=None, key=None):
+        if key:
+            final_key = key
+        else:
+            func_name = function_name or aggregation.func.__name__ if aggregation.func.__name__ != '<lambda>' else key
+            final_key = '{0}__{1}'.format(str(aggregation.path), func_name)
+        values = list((aggregation.path.get(val) for val in self.data))
+        return aggregation.aggregate(values), final_key
+
+    def aggregate(self, *args, **kwargs):
+        data = {}  # Isn't lazy
+        flat = kwargs.pop('flat', False)
+
+        for conf in args:
+            function_name = None
+            try:
+                # path / function tuple aggregate
+                path, func = conf
+            except TypeError:
+                # Django-like aggregate
+                path = lookup_to_path(conf.attr_name)
+                func = conf.aggregate
+                function_name = conf.name
+
+            aggregation = Aggregation(path, func)
+            aggregate, key = self._build_aggregate(aggregation, function_name=function_name)
+            data[key] = aggregate
+        for key, conf in kwargs.items():
+            function_name = None
+            try:
+                # path / function tuple aggregate
+                path, func = conf
+            except TypeError:
+                # Django-like aggregate
+                path = lookup_to_path(conf.attr_name)
+                func = conf.aggregate
+                function_name = conf.name
+
+            aggregation = Aggregation(path, func)
+            aggregate, key = self._build_aggregate(aggregation, function_name=function_name, key=key)
+            data[key] = aggregate
+
+
+        if flat:
+            return list(data.values())  # Isn't lazy
+
+        return data
 
     def distinct(self):
-        return self._clone(utils.unique_everseen(self._values))
+        return self._clone(utils.unique_everseen(self.data))
 
-class Manager(object):
-    """Used to retrieve / order / filter preferences pretty much as django's ORM managers"""
-
-    def __init__(self, values, queryset_class=QuerySet):
-        self._values = values
-        self.queryset_class = queryset_class
-
-    def get_queryset(self):
-        return self.queryset_class(self._values)
-
-    def all(self):
-        return self.get_queryset().all()
-
-    def __getattr__(self, attr):
-        try:
-            return super(Manager, self).__getattr__(attr)
-        except AttributeError:
-            # Try to proxy on queryset if possible
-            return getattr(self.get_queryset(), attr)
+    def exists(self):
+        return len(self) > 0

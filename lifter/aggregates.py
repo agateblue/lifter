@@ -1,3 +1,4 @@
+from statistics import mean
 from . import utils
 
 
@@ -16,28 +17,23 @@ class Sum(Aggregate):
     name = 'sum'
 
     def aggregate(self, values):
-        getter = utils.attrgetter(self.attr_name)
-        return sum([getter(v) for v in values])
+        return sum(values)
 
 
 class Min(Aggregate):
     name = 'min'
 
     def aggregate(self, values):
-        getter = utils.attrgetter(self.attr_name)
-        return min([getter(v) for v in values])
+        return min(values)
 
 class Max(Aggregate):
     name = 'max'
 
     def aggregate(self, values):
-        getter = utils.attrgetter(self.attr_name)
-        return max([getter(v) for v in values])
+        return max(values)
 
 class Avg(Aggregate):
     name = 'avg'
 
     def aggregate(self, values):
-        getter = utils.attrgetter(self.attr_name)
-        total = sum([getter(v) for v in values])
-        return float(total) / len(values)
+        return mean(values)
