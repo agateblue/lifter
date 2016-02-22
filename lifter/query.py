@@ -164,7 +164,7 @@ class Manager(object):
 
     def __getattr__(self, attr):
         try:
-            return super(Manager, self).__getattr__(attr)
+            return getattr(super(Manager, self), attr)
         except AttributeError:
             # Try to proxy on queryset if possible
             return getattr(self.get_queryset(), attr)
