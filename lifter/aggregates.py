@@ -1,4 +1,3 @@
-from statistics import mean
 from . import utils
 
 
@@ -36,4 +35,4 @@ class Avg(Aggregate):
     name = 'avg'
 
     def aggregate(self, values):
-        return mean(values)
+        return float(sum(values)) / len(values)

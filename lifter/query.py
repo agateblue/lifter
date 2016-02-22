@@ -287,6 +287,7 @@ class QuerySet(object):
                 return self._clone(sample(self.data, len(self.data)))
 
             if path.startswith('-'):
+                # Django like ordering
                 reverse = True
                 path = path[1:]
 
