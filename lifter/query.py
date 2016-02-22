@@ -7,6 +7,13 @@ from . import utils
 
 REPR_OUTPUT_SIZE = 10
 
+
+def filter_values(func, values):
+    """We implement a lazy filter since built-in filter() is not lazy in Python2"""
+    for value in values:
+        if func(value):
+            yield value
+
 class Path(object):
     def __init__(self, path=None):
         self.path = path or []
@@ -160,13 +167,14 @@ def lookup_to_path(lookup):
 
 class QuerySet(object):
     def __init__(self, data):
+        self._populated = False
         if isinstance(data, Iterator):
             self._iter_data = data
             self._data = []
         else:
             self._iter_data = None
             self._data = data
-
+            self._populated = True
     def __repr__(self):
         suffix = ''
         if len(self.data) > REPR_OUTPUT_SIZE:
@@ -191,6 +199,7 @@ class QuerySet(object):
 
     def _fetch_all(self):
         self._data = [item for item in self.iterator()]
+        self._populated = True
         return self._data
 
     def iterator(self):
@@ -217,7 +226,7 @@ class QuerySet(object):
 
     def get(self, query=None, **kwargs):
         final_query = self.build_query(query, **kwargs)
-        matches = list(filter(final_query, iter(self.data)))
+        matches = list(filter_values(final_query, iter(self.data)))
         if len(matches) == 0:
             raise exceptions.DoesNotExist()
         if len(matches) > 1:
@@ -270,12 +279,12 @@ class QuerySet(object):
     def filter(self, query=None, **kwargs):
         final_query = self.build_query(query, **kwargs)
 
-        return self._clone(filter(final_query, self.data))
+        return self._clone(filter_values(final_query, self.data))
 
     def exclude(self, query=None, **kwargs):
         final_query = self.build_query(query, **kwargs)
 
-        return self._clone(filter(lambda val: not final_query(val), self.data))
+        return self._clone(filter_values(lambda val: not final_query(val), self.data))
 
     def count(self):
         return len(list(self.data))

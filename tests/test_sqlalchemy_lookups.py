@@ -12,7 +12,6 @@ import random
 import sys
 import unittest
 import mock
-from statistics import mean
 import lifter
 
 
@@ -66,6 +65,7 @@ class TestQueries(TestBase):
         with mock.patch('lifter.query.QuerySet._fetch_all') as fetch:
             qs = self.manager.all().filter(TestModel.order == 3)
             fetch.assert_not_called()
+            self.assertFalse(qs._populated)
             self.assertEqual(qs._data, [])
 
         self.assertEqual(qs, [self.OBJECTS[1]])
@@ -74,6 +74,7 @@ class TestQueries(TestBase):
             self.assertEqual(qs, [self.OBJECTS[1]])
             self.assertEqual(qs, [self.OBJECTS[1]])
             self.assertEqual(qs, [self.OBJECTS[1]])
+            self.assertTrue(qs._populated)
             fetch.assert_not_called()
 
 
@@ -307,6 +308,8 @@ class TestLookups(TestBase):
         self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.icontains('lin'))),
                         [self.OBJECTS[2], self.OBJECTS[3]])
 
+def mean(values):
+    return float(sum(values)) / len(values)
 
 class TestAggregation(TestBase):
     def test_sum(self):
