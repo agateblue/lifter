@@ -19,6 +19,8 @@ If you find if painful to gather data from collections of Python objects or dict
 **Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
 Contributions are welcome :)
 
+Documentation is available at http://lifter.readthedocs.org
+
 Features
 --------
 
@@ -143,4 +145,6 @@ As you can see, lifter's version is shorter and more readable than vanilla Pytho
 It's also less error prone, especially if you're writing really complex queries,
 and quite familiar if you've already used an ORM.
 
-Wanna know more? Have a look at the documentation!
+Wanna know more? Have a look at the documentation_!
+
+.. _documentation: http://lifter.readthedocs.org
