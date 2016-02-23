@@ -5,6 +5,9 @@ What is lifter?
 .. image:: https://img.shields.io/pypi/v/lifter.svg
         :target: https://pypi.python.org/pypi/lifter
 
+.. image:: https://readthedocs.org/projects/lifter/badge/?version=latest
+        :target: http://lifter.readthedocs.org/en/latest/?badge=latest
+
 .. image:: https://travis-ci.org/EliotBerriot/lifter.svg?branch=master
     :target: https://travis-ci.org/EliotBerriot/lifter
 
