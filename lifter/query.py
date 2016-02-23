@@ -226,8 +226,8 @@ class QuerySet(object):
     def all(self):
         return self._clone(self.data)
 
-    def get(self, query=None, **kwargs):
-        final_query = self.build_query(query, **kwargs)
+    def get(self, *args, **kwargs):
+        final_query = self.build_query(*args, **kwargs)
         matches = list(filter_values(final_query, iter(self.data)))
         if len(matches) == 0:
             raise exceptions.DoesNotExist()
@@ -247,17 +247,24 @@ class QuerySet(object):
         except IndexError:
             return None
 
-    def build_query(self, query=None, **kwargs):
-        if not query and not kwargs:
+    def build_query(self, *args, **kwargs):
+        if not args and not kwargs:
             raise ValueError('You need to provide at least a query or some keyword arguments')
 
+        final_arg_query = None
+        for arg in args:
+            if not final_arg_query:
+                final_arg_query = arg
+                continue
+            final_arg_query = final_arg_query & arg
+
         kwargs_query = self.build_query_from_kwargs(**kwargs)
-        if kwargs_query and query:
-            final_query = query & kwargs_query
+        if kwargs_query and final_arg_query:
+            final_query = final_arg_query & kwargs_query
         elif kwargs_query:
             final_query = kwargs_query
         else:
-            final_query = query
+            final_query = final_arg_query
 
         return final_query
 
@@ -278,13 +285,13 @@ class QuerySet(object):
                 query = q
         return query
 
-    def filter(self, query=None, **kwargs):
-        final_query = self.build_query(query, **kwargs)
+    def filter(self, *args, **kwargs):
+        final_query = self.build_query(*args, **kwargs)
 
         return self._clone(filter_values(final_query, self.data))
 
-    def exclude(self, query=None, **kwargs):
-        final_query = self.build_query(query, **kwargs)
+    def exclude(self, *args, **kwargs):
+        final_query = self.build_query(*args, **kwargs)
 
         return self._clone(filter_values(lambda val: not final_query(val), self.data))
 
