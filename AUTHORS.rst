@@ -15,5 +15,7 @@ Contributors
 * Mec-iS
 * johnfraney
 * youtux
+* angru
+* radarhere
 
 Join us ;)
