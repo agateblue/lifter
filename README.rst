@@ -317,6 +317,8 @@ You can prefix the attribute with `-` to reverse the ordering:
     # will return older users first
     manager.all().order_by('-age')
 
+Or even use a random ordering using a question mark:
+
 .. code-block:: python
 
     # will return random ordered queryset
@@ -429,7 +431,7 @@ user built-in lookups to build more complex queries:
     manager.exclude(age=lifter.lt(43))
 
     # return all users between 21 and 27 years old
-    manager.exclude(age=lifter.value_range(21, 27))
+    manager.filter(age=lifter.value_range(21, 27))
 
     # return users with brown or green eyes
     manager.filter(eye_color=lifter.value_in(['brown', 'green']))
