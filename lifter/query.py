@@ -296,7 +296,7 @@ class QuerySet(object):
         return self._clone(filter_values(lambda val: not final_query(val), self.data))
 
     def count(self):
-        return len(list(self.data))
+        return len(self.data)
 
     def order_by(self, path, reverse=False):
         if isinstance(path, str):

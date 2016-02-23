@@ -12,3 +12,5 @@ Or, if you have virtualenvwrapper installed::
 
     $ mkvirtualenv lifter
     $ pip install lifter
+
+That's it, you can continue to the next section!

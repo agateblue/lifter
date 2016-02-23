@@ -90,7 +90,7 @@ Getting getting all active 26 years old users:
     ]
 
     # lifter
-    results = manager.filter((User.age == 26,) & (User.is_active == True))
+    results = manager.filter(User.age == 26, User.is_active == True)
 
 Getting names and emails of inactive users under 56:
 
@@ -103,7 +103,7 @@ Getting names and emails of inactive users under 56:
     ]
 
     # lifter
-    results = manager.filter((User.is_active == False) & (User.age < 56))\
+    results = manager.filter(User.is_active == False, User.age < 56)\
                      .values_list('name', 'email')
 
 Getting all active users except the one with brown eyes and sort them by age:
@@ -118,8 +118,8 @@ Getting all active users except the one with brown eyes and sort them by age:
     results = sorted(raw_results, key=lambda v: v['age'])
 
     # lifter
-    results = manager.filter(is_active=True)\
-                     .exclude(eye_color='brown')\
+    results = manager.filter(User.is_active == True)\
+                     .exclude(User.eye_color == 'brown')\
                      .order_by('age')
 
 Getting minimum and average women age:
@@ -136,25 +136,11 @@ Getting minimum and average women age:
     minimum_woman_age = min(women_ages)
 
     # lifter
-    results = manager.filter(gender='female')\
-                     .aggregate(lifter.Avg('age'), lifter.Min('age'))
+    results = manager.filter(User.gender='female')\
+                     .aggregate((User.age, mean), (User.age, min))
 
 As you can see, lifter's version is shorter and more readable than vanilla Python.
 It's also less error prone, especially if you're writing really complex queries,
 and quite familiar if you've already used an ORM.
 
-Wanna know more? Let's dive in ;)
-
-Contributing
-------------
-
-Bug reports, feature requests and pull requests, are welcome, but before submitting anything,
-please read `CONTRIBUTING.rst <./CONTRIBUTING.rst>`_.
-
-Credits
----------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+Wanna know more? Have a look at the documentation!

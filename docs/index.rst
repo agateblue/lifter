@@ -6,15 +6,20 @@
 Welcome to lifter's documentation!
 ======================================
 
-.. include:: ../README.rst
+Lifter is a lightweight query engine for Python iterables, inspired by Django ORM.
 
+If you find if painful to gather data from collections of Python objects or dictionaries, such as API results, lifter is for you!
+
+.. warning::
+
+    This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
+    Contributions are welcome :)
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-   readme
    overview
    installation
    usage
