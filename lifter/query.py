@@ -59,6 +59,9 @@ class Path(object):
     def test(self, func):
         return self._query.test(func)
 
+    def exists(self):
+        return self._query.exists()
+
 class Aggregation(object):
     def __init__(self, path, func):
         self.path = path
@@ -158,6 +161,16 @@ class Query(object):
         return self._generate_test(
             func, ('test', self.path, func)
         )
+
+    def exists(self):
+        def impl(value):
+            try:
+                v = self.path.get(value)
+                return True
+            except exceptions.MissingAttribute:
+                return False
+
+        return QueryImpl(impl, ('exists', self.path))
 
     # __contains__, matches, search, any, all, exists probably
 
