@@ -5,3 +5,6 @@ class DoesNotExist(ValueError):
 
 class MultipleObjectsReturned(ValueError):
     pass
+
+class MissingAttribute(AttributeError):
+    pass

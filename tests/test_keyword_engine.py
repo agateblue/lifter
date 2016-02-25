@@ -72,9 +72,9 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.get(parent__name='parent_1', order=2), self.DICTS[0])
 
     def test_exception_raised_on_missing_attr(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             self.manager.filter(x="y").count()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             self.dict_manager.filter(x="y").count()
 
     # def test_can_check_nested_iterables(self):

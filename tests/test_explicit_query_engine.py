@@ -117,9 +117,9 @@ class TestQueries(TestBase):
 
 
     def test_exception_raised_on_missing_attr(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             list(self.manager.filter(TestModel.x == "y"))
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             list(self.dict_manager.filter(TestModel.x == "y"))
 
     def test_can_count(self):
@@ -317,6 +317,24 @@ class TestLookups(TestBase):
     def test_icontains(self):
         self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.icontains('lin'))),
                         [self.OBJECTS[2], self.OBJECTS[3]])
+
+    def test_field_exists(self):
+
+        families = [
+            {
+                'name': 'Community',
+                'postal_adress': 'Greendale',
+            },
+            {
+                'name': 'Misfits',
+            }
+        ]
+
+        Family = lifter.models.Model('Family')
+        manager = Family.load(families)
+
+        self.assertEqual(manager.filter(Family.postal_adress.exists()), [families[0]])
+        self.assertEqual(manager.filter(~Family.postal_adress.exists()), [families[1]])
 
 def mean(values):
     return float(sum(values)) / len(values)
