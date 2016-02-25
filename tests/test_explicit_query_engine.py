@@ -301,6 +301,65 @@ class TestQueries(TestBase):
         sons_with_dob = Member.load(members).filter(Member.name == 'son', Member.dob.exists())
         self.assertEqual(sons_with_dob, [{'name': 'son', 'dob':'2/24/2000'}])
 
+    def test_complex_lookups_inside_nested_iterable(self):
+        users = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {
+                        'name': 'nice',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_2'},
+                        ]
+                    },
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_0'},
+                        ]
+                    },
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_3'},
+                        ]
+                    },
+                ]
+            },
+        ]
+
+        User = lifter.models.Model('User')
+        manager = User.load(users)
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.endswith('ce')))
+        self.assertTrue(qs, [users[0]])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))
+        self.assertTrue(qs ,[users[0], users[1]])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))
+        self.assertTrue(qs, [users[0], users[1]])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))\
+                    .values_list(User.tags.name, flat=True)
+
+        self.assertEqual(qs, [['nice', 'friendly'], ['friendly']])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))\
+                    .values(User.tags.name)
+        expected = [
+            {'tags.name': ['nice', 'friendly']},
+            {'tags.name': ['friendly']},
+        ]
+        self.assertEqual(qs, expected)
+
 
 class TestLookups(TestBase):
     def test_gt(self):

@@ -6,23 +6,39 @@ from . import exceptions
 class IterableAttr(object):
 
     def __init__(self, iterable, key):
-        self._items = [item[key] for item in iterable]
+        self._getter = attrgetter(key)
+        self._key = key
+        self._items = iterable
+        self._resolved_items = []
+
+    def get_resolved_items(self, fail_silently=False):
+        if not self._resolved_items:
+            for item in self._items:
+                try:
+                    self._resolved_items.append(self._getter(item))
+                except exceptions.MissingAttribute:
+                    if fail_silently:
+                        continue
+                    raise
+
+        return self._resolved_items
 
     def __eq__(self, other):
-        return other in self._items
+        return other in self.get_resolved_items()
 
     def __getitem__(self, key):
-        return self.__class__(self._items, key)
+        return self.__class__(self.get_resolved_items(), key)
 
-    def _resolve_test(self, test):
-        if not self._items:
-            return test(self._items)
+    def _resolve_test(self, test, fail_silently=False):
+        resolved_items = self.get_resolved_items(fail_silently)
+        if not resolved_items:
+            return test(resolved_items)
 
-        if isinstance(self._items[0], IterableAttr):
+        if isinstance(resolved_items[0], IterableAttr):
             # nested iterables
-            return any([item._resolve_test(test) for item in self._items])
+            return any([item._resolve_test(test) for item in resolved_items])
 
-        return any([test(item) for item in self._items])
+        return any([test(item) for item in resolved_items])
 
 def attrgetter(*items):
 
@@ -48,8 +64,9 @@ def resolve_attr(obj, attr):
                 try:
                     obj = obj[name]
                 except TypeError:
+                    obj.__iter__
                     obj = IterableAttr(obj, name)
-            except (KeyError, TypeError):
+            except (KeyError, TypeError, AttributeError):
                 raise exceptions.MissingAttribute('Object {0} has no attribute or key "{1}"'.format(obj, name))
     return obj
 
