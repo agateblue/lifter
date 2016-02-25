@@ -167,7 +167,7 @@ class Query(object):
             try:
                 v = self.path.get(value)
                 return True
-            except (AttributeError, KeyError):
+            except exceptions.MissingAttribute:
                 return False
 
         return QueryImpl(impl, ('exists', self.path))
