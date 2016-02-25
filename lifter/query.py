@@ -118,11 +118,17 @@ class Query(object):
     def __init__(self, path):
         self.path = path
 
-    def _generate_test(self, test, hashval):
-        def impl(value):
-            return test(self.path.get(value))
+    def _get_impl(self, test):
+        def impl(obj):
+            value = self.path.get(obj)
+            if isinstance(value, utils.IterableAttr):
+                return value._resolve_test(test)
+            return test(value)
+        return impl
 
-        return QueryImpl(impl, hashval)
+    def _generate_test(self, test, hashval):
+
+        return QueryImpl(self._get_impl(test), hashval)
 
     def __call__(self, callable):
         raise NotImplementedError()
@@ -163,10 +169,14 @@ class Query(object):
         )
 
     def exists(self):
-        def impl(value):
+        def _base_impl(obj):
+            return True
+
+        base_impl = self._get_impl(lambda obj: True)
+
+        def impl(obj):
             try:
-                v = self.path.get(value)
-                return True
+                return base_impl(obj)
             except exceptions.MissingAttribute:
                 return False
 

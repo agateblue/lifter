@@ -14,6 +14,15 @@ class IterableAttr(object):
     def __getitem__(self, key):
         return self.__class__(self._items, key)
 
+    def _resolve_test(self, test):
+        if not self._items:
+            return test(self._items)
+
+        if isinstance(self._items[0], IterableAttr):
+            # nested iterables
+            return any([item._resolve_test(test) for item in self._items])
+
+        return any([test(item) for item in self._items])
 
 def attrgetter(*items):
 
