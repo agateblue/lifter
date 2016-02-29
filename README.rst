@@ -22,7 +22,10 @@ If you find if painful to gather data from collections of Python objects or dict
 **Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
 Contributions are welcome :)
 
-Documentation is available at http://lifter.readthedocs.org
+Useful links:
+
+- Documentation is available at http://lifter.readthedocs.org
+- Ask your programming questions on Stack Overflow using the tag `python-lifter <http://stackoverflow.com/questions/tagged/python-lifter>`_
 
 Features
 --------
