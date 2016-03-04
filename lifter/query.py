@@ -1,7 +1,6 @@
 import itertools
 from collections import Iterator
-from random import sample
-
+import random
 from . import exceptions
 from . import utils
 
@@ -56,11 +55,22 @@ class Path(object):
     def __le__(self, other):
         return self._query.__le__(other)
 
+    def __invert__(self):
+        """For reverse order_by"""
+        return Ordering(self, reverse=True)
+
     def test(self, func):
         return self._query.test(func)
 
     def exists(self):
         return self._query.exists()
+
+class Ordering(object):
+
+    def __init__(self, path, reverse=False, random=False):
+        self.path = path
+        self.reverse = reverse
+        self.random = random
 
 class Aggregation(object):
     def __init__(self, path, func):
@@ -311,23 +321,48 @@ class QuerySet(object):
     def count(self):
         return len(self.data)
 
-    def order_by(self, path, reverse=False):
-        if isinstance(path, str):
-            if path == '?':
-                # Random ordering
-                return self._clone(sample(self.data, len(self.data)))
+    def _parse_ordering(self, *paths):
+        orderings = []
 
-            if path.startswith('-'):
-                # Django like ordering
-                reverse = True
-                path = path[1:]
+        for path in paths:
+            if isinstance(path, Ordering):
+                # probably explicit reverted ordering using ~Model.attribute
+                orderings.append(path)
+                continue
 
-            path = self.arg_to_path(path)
+            reverse = False
+            if isinstance(path, str):
+                if path == '?':
+                    orderings.append(Ordering(None, random=True))
+                    continue
+                reverse = path.startswith('-')
+                if reverse:
+                    path = path[1:]
+                path = self.arg_to_path(path)
+            orderings.append(Ordering(path, reverse))
 
-        def create_generator():
-            return sorted(self.data, key=path.get, reverse=reverse) # sorted is not lazy
+        return orderings
 
-        return self._clone(create_generator())
+    def order_by(self, *orderings):
+        parsed_orderings = self._parse_ordering(*orderings)
+        # ordering = parsed_orderings[0]
+
+        random_value = lambda v: random.random()
+
+        sorter = self.iterator()
+        for ordering in reversed(parsed_orderings):
+            # We loop in reverse order because we found no other way to handle multiple sorting
+            # in different directions right now
+
+            if ordering.random:
+                sorter = sorted(sorter, key=random_value)
+                continue
+            sorter = sorted(sorter, key=ordering.path.get, reverse=ordering.reverse)
+        # print(sorter)
+        # def create_generator():
+        #     return sorted(self.iterator(), key=ordering.path.get, reverse=ordering.reverse) # sorted is not lazy
+
+        return self._clone(sorter)
 
     def arg_to_path(self, arg):
         path = arg
