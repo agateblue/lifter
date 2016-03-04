@@ -136,6 +136,38 @@ QuerySet methods
         >>> manager.filter(User.age == 42).get(User.first_name == 'Kurt')
         # Retrieve among 42 years-old users
 
+.. py:method:: order_by(*paths)
+
+    Order the queryset results using the provided attribute(s):
+
+    .. code-block:: python
+
+        >>> manager.order_by(User.age)
+        # Returns a queryset of users, from younger to older
+
+    You can reverse the ordering using python invert operator:
+
+    .. code-block:: python
+
+        >>> manager.order_by(~User.age)
+        # Returns a queryset of users, from older to younger, this time
+
+    It's possible to sort using multiple paths:
+
+    .. code-block:: python
+
+        >>> manager.order_by(User.is_active, User.age)
+        # Sort by is_active then by age
+
+    Finally, you can also use random sorting, by passing a question mark instead of a path:
+
+    .. code-block:: python
+
+        >>> manager.order_by('?')
+        # Random order
+        >>> manager.order_by(User.age, '?')
+        # Sort by age then randomly
+
 .. py:method:: values(*paths)
 
     Use this method if you only want to retrieve specific values from your object list,
