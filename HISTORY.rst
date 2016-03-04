@@ -2,6 +2,16 @@
 History
 =======
 
+0.2.1 (2016-3-4)
+----------------
+
+This is a small release, with a few improvements on ordering API and on the overall documentation:
+
+* Can now order using multiple fields, fix #30
+* [Backward incompatible] Can now invert ordering in explicit engine using path and ~ operator. Passing a `reverse` argument to `order_by` is not possible anymore
+* Can now query for field existences, fix #26
+
+
 0.2 (2016-2-23)
 ---------------
 

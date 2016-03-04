@@ -1,7 +1,15 @@
 
-class DoesNotExist(ValueError):
+class LifterException(Exception):
     pass
 
 
-class MultipleObjectsReturned(ValueError):
+class DoesNotExist(LifterException, ValueError):
+    pass
+
+
+class MultipleObjectsReturned(LifterException, ValueError):
+    pass
+
+
+class MissingAttribute(LifterException, ValueError):
     pass

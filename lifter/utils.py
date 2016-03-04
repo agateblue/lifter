@@ -1,5 +1,6 @@
 
 import operator
+from . import exceptions
 
 
 class IterableAttr(object):
@@ -40,7 +41,7 @@ def resolve_attr(obj, attr):
                 except TypeError:
                     obj = IterableAttr(obj, name)
             except (KeyError, TypeError):
-                raise ValueError('Object {0} has no attribute or key "{1}"'.format(obj, name))
+                raise exceptions.MissingAttribute('Object {0} has no attribute or key "{1}"'.format(obj, name))
     return obj
 
 def unique_everseen(seq):

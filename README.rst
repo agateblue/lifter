@@ -5,6 +5,9 @@ What is lifter?
 .. image:: https://img.shields.io/pypi/v/lifter.svg
         :target: https://pypi.python.org/pypi/lifter
 
+.. image:: https://readthedocs.org/projects/lifter/badge/?version=latest
+        :target: http://lifter.readthedocs.org/en/latest/?badge=latest
+
 .. image:: https://travis-ci.org/EliotBerriot/lifter.svg?branch=master
     :target: https://travis-ci.org/EliotBerriot/lifter
 
@@ -19,19 +22,22 @@ If you find if painful to gather data from collections of Python objects or dict
 **Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
 Contributions are welcome :)
 
-Documentation is available at http://lifter.readthedocs.org
+Useful links:
+
+- Documentation is available at http://lifter.readthedocs.org
+- Ask your programming questions on Stack Overflow using the tag `python-lifter <http://stackoverflow.com/questions/tagged/python-lifter>`_
 
 Features
 --------
 
 * Operates on plain objects or mapping (such as dictionaries)
-* API similar to Django querysets_ and SQLAlchemy_
+* Queryset API similar to Django_  and SQLAlchemy_
 * Lazy querysets
 * Composable queries
 * Lightweight: absolutely no dependencies
 * Tested and working on Python 2.7 to Python 3.5
 
-.. _querysets: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
+.. _Django: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_1_0/orm/tutorial.html#common-filter-operators
 
 Example usage

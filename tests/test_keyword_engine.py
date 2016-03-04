@@ -72,9 +72,9 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.get(parent__name='parent_1', order=2), self.DICTS[0])
 
     def test_exception_raised_on_missing_attr(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             self.manager.filter(x="y").count()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             self.dict_manager.filter(x="y").count()
 
     # def test_can_check_nested_iterables(self):
@@ -149,6 +149,7 @@ class TestQueries(TestBase):
         self.assertIsNone(self.dict_manager.filter(a=123).first())
         self.assertIsNotNone(self.dict_manager.filter(a=1).first())
 
+
     def test_ordering(self):
         self.assertEqual(self.manager.order_by('order')[:2], [self.OBJECTS[2], self.OBJECTS[0]])
         self.assertEqual(self.manager.order_by('-order')[:2], [self.OBJECTS[3], self.OBJECTS[1]])
@@ -156,8 +157,9 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.order_by('order')[:2], [self.DICTS[2], self.DICTS[0]])
         self.assertEqual(self.dict_manager.order_by('-order')[:2], [self.DICTS[3], self.DICTS[1]])
 
+    @unittest.skip('If someone find a proper way to unittest random ordering, contribution is welcome')
+    def test_random_ordering(self):
         is_py3 = sys.version_info >= (3, 2)
-
         random.seed(0)
         random_ordered_0 = self.dict_manager.order_by('?')[:2]
         if is_py3:

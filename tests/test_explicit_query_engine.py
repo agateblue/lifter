@@ -117,9 +117,9 @@ class TestQueries(TestBase):
 
 
     def test_exception_raised_on_missing_attr(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             list(self.manager.filter(TestModel.x == "y"))
-        with self.assertRaises(ValueError):
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
             list(self.dict_manager.filter(TestModel.x == "y"))
 
     def test_can_count(self):
@@ -144,11 +144,21 @@ class TestQueries(TestBase):
     def test_ordering(self):
         TestModel = lifter.models.Model('TestModel')
         self.assertEqual(self.manager.order_by(TestModel.order)[:2], [self.OBJECTS[2], self.OBJECTS[0]])
-        self.assertEqual(self.manager.order_by(TestModel.order, reverse=True)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
+        self.assertEqual(self.manager.order_by(~TestModel.order)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
 
         self.assertEqual(self.dict_manager.order_by(TestModel.order)[:2], [self.DICTS[2], self.DICTS[0]])
-        self.assertEqual(self.dict_manager.order_by(TestModel.order, reverse=True)[:2], [self.DICTS[3], self.DICTS[1]])
+        self.assertEqual(self.dict_manager.order_by(~TestModel.order)[:2], [self.DICTS[3], self.DICTS[1]])
 
+    def test_ordering_using_multiple_paths(self):
+        TestModel = lifter.models.Model('TestModel')
+        p1 = TestModel.a
+        p2 = TestModel.order
+        self.assertEqual(self.manager.order_by(p1, p2)[:2], [self.OBJECTS[0], self.OBJECTS[1]])
+        self.assertEqual(self.manager.order_by(~p1, p2)[:2], [self.OBJECTS[2], self.OBJECTS[3]])
+        self.assertEqual(self.manager.order_by(p1, ~p2)[:2], [self.OBJECTS[1], self.OBJECTS[0]])
+        self.assertEqual(self.manager.order_by(~p1, ~p2)[:2], [self.OBJECTS[3], self.OBJECTS[2]])
+
+    @unittest.skip('If someone find a proper way to unittest random ordering, contribution is welcome')
     def test_random_ordering(self):
         is_py3 = sys.version_info >= (3, 2)
 
@@ -317,6 +327,24 @@ class TestLookups(TestBase):
     def test_icontains(self):
         self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.icontains('lin'))),
                         [self.OBJECTS[2], self.OBJECTS[3]])
+
+    def test_field_exists(self):
+
+        families = [
+            {
+                'name': 'Community',
+                'postal_adress': 'Greendale',
+            },
+            {
+                'name': 'Misfits',
+            }
+        ]
+
+        Family = lifter.models.Model('Family')
+        manager = Family.load(families)
+
+        self.assertEqual(manager.filter(Family.postal_adress.exists()), [families[0]])
+        self.assertEqual(manager.filter(~Family.postal_adress.exists()), [families[1]])
 
 def mean(values):
     return float(sum(values)) / len(values)
