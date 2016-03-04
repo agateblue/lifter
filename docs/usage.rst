@@ -70,9 +70,6 @@ and a test function:
     # Will return True if kurt.age > 36
     query.match(kurt)
 
-When you create a :py:class:`QuerySet` by calling one of the previous methods such as :py:func:`filter`, lifter will store the query,
-and apply it when it's time to actually retrieve the data (usually when you loop over the results).
-
 
 QuerySet methods
 ****************

@@ -31,13 +31,13 @@ Features
 --------
 
 * Operates on plain objects or mapping (such as dictionaries)
-* API similar to Django querysets_ and SQLAlchemy_
+* Queryset API similar to Django_  and SQLAlchemy_
 * Lazy querysets
 * Composable queries
 * Lightweight: absolutely no dependencies
 * Tested and working on Python 2.7 to Python 3.5
 
-.. _querysets: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
+.. _Django: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_1_0/orm/tutorial.html#common-filter-operators
 
 Example usage
