@@ -144,10 +144,10 @@ class TestQueries(TestBase):
     def test_ordering(self):
         TestModel = lifter.models.Model('TestModel')
         self.assertEqual(self.manager.order_by(TestModel.order)[:2], [self.OBJECTS[2], self.OBJECTS[0]])
-        self.assertEqual(self.manager.order_by(TestModel.order, reverse=True)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
+        self.assertEqual(self.manager.order_by(~TestModel.order)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
 
         self.assertEqual(self.dict_manager.order_by(TestModel.order)[:2], [self.DICTS[2], self.DICTS[0]])
-        self.assertEqual(self.dict_manager.order_by(TestModel.order, reverse=True)[:2], [self.DICTS[3], self.DICTS[1]])
+        self.assertEqual(self.dict_manager.order_by(~TestModel.order)[:2], [self.DICTS[3], self.DICTS[1]])
 
     def test_random_ordering(self):
         is_py3 = sys.version_info >= (3, 2)
