@@ -1,7 +1,6 @@
 import itertools
 from collections import Iterator
-from random import sample
-
+import random
 from . import exceptions
 from . import utils
 
@@ -346,15 +345,24 @@ class QuerySet(object):
 
     def order_by(self, *orderings):
         parsed_orderings = self._parse_ordering(*orderings)
-        ordering = parsed_orderings[0]
+        # ordering = parsed_orderings[0]
 
-        if ordering.random:
-            return self._clone(sample(self.data, len(self.data)))
+        random_value = lambda v: random.random()
 
-        def create_generator():
-            return sorted(self.data, key=ordering.path.get, reverse=ordering.reverse) # sorted is not lazy
+        sorter = self.iterator()
+        for ordering in reversed(parsed_orderings):
+            # We loop in reverse order because we found no other way to handle multiple sorting
+            # in different directions right now
 
-        return self._clone(create_generator())
+            if ordering.random:
+                sorter = sorted(sorter, key=random_value)
+                continue
+            sorter = sorted(sorter, key=ordering.path.get, reverse=ordering.reverse)
+        # print(sorter)
+        # def create_generator():
+        #     return sorted(self.iterator(), key=ordering.path.get, reverse=ordering.reverse) # sorted is not lazy
+
+        return self._clone(sorter)
 
     def arg_to_path(self, arg):
         path = arg

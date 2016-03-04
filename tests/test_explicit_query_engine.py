@@ -149,6 +149,16 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.order_by(TestModel.order)[:2], [self.DICTS[2], self.DICTS[0]])
         self.assertEqual(self.dict_manager.order_by(~TestModel.order)[:2], [self.DICTS[3], self.DICTS[1]])
 
+    def test_ordering_using_multiple_paths(self):
+        TestModel = lifter.models.Model('TestModel')
+        p1 = TestModel.a
+        p2 = TestModel.order
+        self.assertEqual(self.manager.order_by(p1, p2)[:2], [self.OBJECTS[0], self.OBJECTS[1]])
+        self.assertEqual(self.manager.order_by(~p1, p2)[:2], [self.OBJECTS[2], self.OBJECTS[3]])
+        self.assertEqual(self.manager.order_by(p1, ~p2)[:2], [self.OBJECTS[1], self.OBJECTS[0]])
+        self.assertEqual(self.manager.order_by(~p1, ~p2)[:2], [self.OBJECTS[3], self.OBJECTS[2]])
+
+    @unittest.skip('If someone find a proper way to unittest random ordering, contribution is welcome')
     def test_random_ordering(self):
         is_py3 = sys.version_info >= (3, 2)
 
