@@ -26,15 +26,14 @@ class Path(object):
     def __str__(self):
         return '.'.join(self.path)
 
-    @property
-    def getters(self):
+    def get(self, data):
         if not self._getters:
+            # Since this is one of the most called method in lifter, we avoid
+            # any call to other methods here
             for part in self.path:
                 self._getters.append(utils.attrgetter(part))
-        return self._getters
 
-    def get(self, data):
-        for getter in self.getters:
+        for getter in self._getters:
             data = getter(data)
 
         return data
