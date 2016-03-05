@@ -95,6 +95,12 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.filter((TestModel.a == 1) & (TestModel.name == 'test_2')), self.DICTS[1:2])
         self.assertEqual(self.dict_manager.filter(TestModel.a == 1).filter(TestModel.name == 'test_2'), self.DICTS[1:2])
 
+    @mock.patch('lifter.query.QuerySet.iterator')
+    def test_queries_combine_to_a_single_one(self, mocked_iterator):
+        queryset = self.manager.filter(TestModel.a == 1).filter(TestModel.order == 1)
+        queryset.count()
+        self.assertEqual(mocked_iterator.call_count, 1)
+
     def test_can_exclude(self):
         self.assertEqual(self.manager.exclude(TestModel.a == 1), self.OBJECTS[2:])
         self.assertEqual(self.dict_manager.exclude(TestModel.a == 1), self.DICTS[2:])
