@@ -6,12 +6,15 @@ from . import benchmarks
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Run the benchmark suite')
-    parser.add_argument('benchmarks', metavar='B', type=str, nargs='?',
+    parser.add_argument('benchmarks', type=str, nargs='?',
                        help='specific benchmarks to run')
 
     parser.add_argument('--profile', dest='profile', action='store_const',
         const=True, default=False,
         help='run profiling against the report')
+    parser.add_argument('--loops', '-l', dest='loops',
+        default=100, type=int,
+        help='Number of loops to run for each benchmark')
     args = parser.parse_args()
     benchmarks_to_run = list(benchmarks.values())
     if args.benchmarks:
@@ -23,4 +26,4 @@ if __name__ == '__main__':
             setup_data = benchmark.setup()
             cProfile.run('benchmark.lifter_version(setup_data)')
         else:
-            benchmark.report()
+            benchmark.report(loops=args.loops)
