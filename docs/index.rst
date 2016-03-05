@@ -23,6 +23,7 @@ Contents:
    overview
    installation
    usage
+   performance
    contributing
    authors
    history
