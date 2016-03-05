@@ -28,10 +28,14 @@ def attrgetter(*items):
 
 def resolve_attr(obj, attr):
     """A custom attrgetter that operates both on dictionaries and objects"""
-    attr = attr.replace('__', '.') # replace lookups
     for name in attr.split("."):
         try:
-            obj = getattr(obj, name)
+            try:
+                # Slight hack for better speed, since accessing dict is faster than getattr
+                obj = obj.__dict__[name]
+            except KeyError:
+                obj = getattr(obj, name)
+
         except AttributeError:
             try:
                 try:

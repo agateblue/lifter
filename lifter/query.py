@@ -17,7 +17,7 @@ class Path(object):
     def __init__(self, path=None):
         self.path = path or []
         self._reversed = False # used for order by
-
+        self._getters = []
     def __getattr__(self, part):
         return self.__class__(self.path + [part])
 
@@ -26,9 +26,15 @@ class Path(object):
     def __str__(self):
         return '.'.join(self.path)
 
+    @property
+    def getters(self):
+        if not self._getters:
+            for part in self.path:
+                self._getters.append(utils.attrgetter(part))
+        return self._getters
+
     def get(self, data):
-        for part in self.path:
-            getter = utils.attrgetter(part)
+        for getter in self.getters:
             data = getter(data)
 
         return data
