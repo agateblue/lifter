@@ -103,7 +103,7 @@ class QueryImpl(object):
         return template.format(*self.hashval)
 
     def __call__(self, val):
-        return self.match(val)
+        return self._test(val)
 
     def __and__(self, other):
         return QueryImpl(

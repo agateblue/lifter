@@ -17,8 +17,6 @@ class IterableAttr(object):
 
 def attrgetter(*items):
 
-    if any(not isinstance(item, str) for item in items):
-        raise TypeError('attribute name must be a string')
     if len(items) == 1:
         attr = items[0]
         def g(obj):
