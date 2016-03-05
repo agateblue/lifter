@@ -18,6 +18,7 @@ class Path(object):
         self.path = path or []
         self._reversed = False # used for order by
         self._getters = []
+        
     def __getattr__(self, part):
         return self.__class__(self.path + [part])
 
@@ -226,7 +227,7 @@ class QuerySet(object):
                 yield obj
         else:
             for obj in self._iter_data:
-                if self.query(obj):
+                if self.query._test(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
 
