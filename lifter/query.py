@@ -17,7 +17,8 @@ class Path(object):
     def __init__(self, path=None):
         self.path = path or []
         self._reversed = False # used for order by
-
+        self._getters = []
+        
     def __getattr__(self, part):
         return self.__class__(self.path + [part])
 
@@ -27,8 +28,13 @@ class Path(object):
         return '.'.join(self.path)
 
     def get(self, data):
-        for part in self.path:
-            getter = utils.attrgetter(part)
+        if not self._getters:
+            # Since this is one of the most called method in lifter, we avoid
+            # any call to other methods here
+            for part in self.path:
+                self._getters.append(utils.attrgetter(part))
+
+        for getter in self._getters:
             data = getter(data)
 
         return data
@@ -103,7 +109,7 @@ class QueryImpl(object):
         return template.format(*self.hashval)
 
     def __call__(self, val):
-        return self.match(val)
+        return self._test(val)
 
     def __and__(self, other):
         return QueryImpl(
@@ -191,34 +197,22 @@ def lookup_to_path(lookup):
     return path
 
 class QuerySet(object):
-    def __init__(self, data):
+    def __init__(self, data, query=None):
+        self.query = query
         self._populated = False
-        if isinstance(data, Iterator):
-            self._iter_data = data
-            self._data = []
-        else:
-            self._iter_data = None
-            self._data = data
-            self._populated = True
+        self._iter_data = data
+        self._data = []
+
     def __repr__(self):
         suffix = ''
         if len(self.data) > REPR_OUTPUT_SIZE:
             suffix = " ...(remaining elements truncated)..."
         return '<QuerySet {0}{1}>'.format(self.data[:REPR_OUTPUT_SIZE], suffix)
 
-    @property
-    def __data(self):  # pretty ugly
-        if self._iter_data:
-            for val in self._iter_data:
-                self._data.append(val)
-
-                yield val
-
-        self._iter_data = None
 
     @property
     def data(self):
-        if self._data:
+        if self._populated:
             return self._data
         return self._fetch_all()
 
@@ -228,7 +222,14 @@ class QuerySet(object):
         return self._data
 
     def iterator(self):
-        return itertools.chain(self._data, self.__data)
+        if not self.query:
+            for obj in self._iter_data:
+                yield obj
+        else:
+            for obj in self._iter_data:
+                if self.query._test(obj):
+                    yield obj
+        # return filter(self.query, self._iter_data)
 
     def __eq__(self, other):
         return self.data == other
@@ -243,20 +244,27 @@ class QuerySet(object):
     def __getitem__(self, index):
         return self.data[index]
 
-    def _clone(self, new_values):
-        return self.__class__(new_values)
+    def _clone(self, source_data=None, query=None):
+        source_data = source_data or self._iter_data
+        return self.__class__(source_data, query=query)
 
     def all(self):
-        return self._clone(self.data)
+        return self._clone()
 
     def get(self, *args, **kwargs):
         final_query = self.build_query(*args, **kwargs)
-        matches = list(filter_values(final_query, iter(self.data)))
-        if len(matches) == 0:
-            raise exceptions.DoesNotExist()
-        if len(matches) > 1:
+        first_match = None
+        for match in filter(final_query, self.data):
+            # Little hack to avoid looping over the whole results set
+            if not first_match:
+                first_match = match
+                continue
             raise exceptions.MultipleObjectsReturned()
-        return matches[0]
+
+        if not first_match:
+            raise exceptions.DoesNotExist()
+
+        return first_match
 
     def first(self):
         try:
@@ -308,15 +316,19 @@ class QuerySet(object):
                 query = q
         return query
 
+    def _combine_query(self, query):
+        if self.query:
+            return query & self.query
+        return query
+
     def filter(self, *args, **kwargs):
         final_query = self.build_query(*args, **kwargs)
 
-        return self._clone(filter_values(final_query, self.data))
+        return self._clone(query=self._combine_query(final_query))
 
     def exclude(self, *args, **kwargs):
-        final_query = self.build_query(*args, **kwargs)
-
-        return self._clone(filter_values(lambda val: not final_query(val), self.data))
+        final_query = ~self.build_query(*args, **kwargs)
+        return self._clone(query=self._combine_query(final_query))
 
     def count(self):
         return len(self.data)
@@ -358,9 +370,6 @@ class QuerySet(object):
                 sorter = sorted(sorter, key=random_value)
                 continue
             sorter = sorted(sorter, key=ordering.path.get, reverse=ordering.reverse)
-        # print(sorter)
-        # def create_generator():
-        #     return sorted(self.iterator(), key=ordering.path.get, reverse=ordering.reverse) # sorted is not lazy
 
         return self._clone(sorter)
 

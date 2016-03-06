@@ -19,10 +19,10 @@ class Benchmark(object):
     def lifter_version(self, setup_data):
         raise NotImplemented()
 
-    def run(self):
+    def run(self, *args, **kwargs):
         setup_data = self.setup()
         data = {}
-        data['total_loops'] = self.loops
+        data['total_loops'] = kwargs.pop('loops', self.loops)
         data['lifter'] = timer(self.lifter_version, setup_data, number=data['total_loops'])
         data['vanilla'] = timer(self.vanilla_version, setup_data, number=data['total_loops'])
 
@@ -35,8 +35,8 @@ class Benchmark(object):
         data['speed_ratio'] = data['lifter']['total_time'] / data['vanilla']['total_time']
         return data
 
-    def report(self):
-        data = self.run()
+    def report(self, *args, **kwargs):
+        data = self.run(*args, **kwargs)
         print(report(data))
 
 def timer(func, *args, **kwargs):

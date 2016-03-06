@@ -17,8 +17,6 @@ class IterableAttr(object):
 
 def attrgetter(*items):
 
-    if any(not isinstance(item, str) for item in items):
-        raise TypeError('attribute name must be a string')
     if len(items) == 1:
         attr = items[0]
         def g(obj):
@@ -28,21 +26,36 @@ def attrgetter(*items):
             return tuple(resolve_attr(obj, attr) for attr in items)
     return g
 
-def resolve_attr(obj, attr):
+def resolve_attr(obj, name):
     """A custom attrgetter that operates both on dictionaries and objects"""
-    attr = attr.replace('__', '.') # replace lookups
-    for name in attr.split("."):
-        try:
-            obj = getattr(obj, name)
-        except AttributeError:
-            try:
-                try:
-                    obj = obj[name]
-                except TypeError:
-                    obj = IterableAttr(obj, name)
-            except (KeyError, TypeError):
-                raise exceptions.MissingAttribute('Object {0} has no attribute or key "{1}"'.format(obj, name))
-    return obj
+    # TODO: setup some hinting, so we can go directly to the correct
+    # Maybe it's a dict ? Let's try dict lookup, it's the fastest
+    try:
+        return obj[name]
+    except TypeError:
+        pass
+    except KeyError:
+        raise exceptions.MissingAttribute('Dict {0} has no attribute or key "{1}"'.format(obj, name))
+
+    # Okay, it's not a dict, what if we try to access the value as for a regular object attribute?
+    try:
+        # Slight hack for better speed, since accessing dict is fast
+        return obj.__dict__[name]
+    except (KeyError, AttributeError):
+        pass
+
+    try:
+        # Lookup using regular attribute
+        return getattr(obj, name)
+    except AttributeError:
+        pass
+
+    # Last possible choice, it's an iterable
+    try:
+        return IterableAttr(obj, name)
+    except TypeError:
+        raise exceptions.MissingAttribute('Object {0} has no attribute or key "{1}"'.format(obj, name))
+
 
 def unique_everseen(seq):
     """Solution found here : http://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-in-python-whilst-preserving-order"""
