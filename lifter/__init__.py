@@ -16,7 +16,7 @@ from . import lookups
 from .lookups import *
 from .aggregates import *
 
-from . import models
+# from . import models
 
 def load(values, *args, **kwargs):
     return Manager(values, *args, **kwargs)

@@ -12,7 +12,7 @@ import random
 import sys
 import unittest
 
-import lifter
+import lifter.models
 
 
 class TestObject(object):
