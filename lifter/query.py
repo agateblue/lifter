@@ -136,7 +136,7 @@ class QueryWrapper(BaseQuery):
     pass
 
 class Query(BaseQuery):
-    """An abstract way to represent query, that will be compiled to an actual query by the backend"""
+    """An abstract way to represent query, that will be compiled to an actual query by the manager"""
     def __init__(self, path):#, test, *test_args, **test_kwargs):
         self.path = path
         # self.test = test
@@ -206,13 +206,15 @@ def lookup_to_path(lookup, path_class):
     return path
 
 class QuerySet(object):
-    def __init__(self, data, model, query=None, orderings=None):
+    def __init__(self, manager, model, query=None, orderings=None, distinct=False):
         self.model = model
-        self.query = query
+        self.manager = manager
         self._populated = False
-        self._iter_data = data
         self._data = []
+
         self.orderings = orderings
+        self.query = query
+        self.distinct_results = distinct
 
     def __repr__(self):
         suffix = ''
@@ -233,8 +235,14 @@ class QuerySet(object):
         self._populated = True
         return self._data
 
+    def get_whole_query_kwargs(self):
+        return {
+            'orderings': self.orderings,
+            'query': self.query,
+            'distinct': self.distinct_results,
+        }
     def iterator(self):
-        return self.execute_query()
+        return self.manager.execute_query(**self.get_whole_query_kwargs())
 
     def __eq__(self, other):
         return self.data == other
@@ -249,10 +257,10 @@ class QuerySet(object):
     def __getitem__(self, index):
         return self.data[index]
 
-    def _clone(self, source_data=None, query=None, orderings=None):
-        source_data = source_data or self._iter_data
+    def _clone(self, query=None, orderings=None, **kwargs):
         orderings = orderings or self.orderings
-        return self.__class__(source_data, model=self.model, query=query, orderings=orderings)
+        distinct = kwargs.get('distinct', self.distinct_results)
+        return self.__class__(self.manager, model=self.model, query=query, orderings=orderings, distinct=distinct)
 
     def all(self):
         return self._clone()
@@ -363,12 +371,10 @@ class QuerySet(object):
             raise ValueError('Empty values')
 
         paths = [self.arg_to_path(arg) for arg in args]
-        return self.execute_from_backend('values', paths)
+        manager_kwargs = self.get_whole_query_kwargs()
 
-    def execute_from_backend(self, func_name, *args, **kwargs):
-        backend_func = getattr(self.backend, func_name)
-        return backend_func(self, *args, **kwargs)
-        
+        return self.manager.values(paths, **manager_kwargs)
+
     def values_list(self, *args, **kwargs):
         if not args:
             raise ValueError('Empty values')
@@ -378,7 +384,9 @@ class QuerySet(object):
         if kwargs.get('flat', False) and len(paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
 
-        return self.execute_from_backend('values_list', paths, kwargs.get('flat', False))
+        manager_kwargs = self.get_whole_query_kwargs()
+        manager_kwargs['flat'] = kwargs.get('flat', False)
+        return self.manager.values_list(paths, **manager_kwargs)
 
     def _build_aggregate(self, aggregation, function_name=None, key=None):
         if key:
@@ -429,7 +437,7 @@ class QuerySet(object):
         return data
 
     def distinct(self):
-        raise NotImplementedError()
+        return self._clone(distinct=True)
 
     def exists(self):
         return len(self) > 0

@@ -19,6 +19,5 @@ from .aggregates import *
 # from . import models
 
 def load(values, *args, **kwargs):
-    from .backends.python import PythonModel, PythonQuerySet
-    kwargs.setdefault('queryset_class', PythonQuerySet)
-    return Manager(values, model=PythonModel, *args, **kwargs)
+    from .backends.python import PythonModel, PythonManager
+    return PythonManager(values=values, model=PythonModel, *args, **kwargs)

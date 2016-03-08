@@ -3,6 +3,7 @@ from . import base
 from .. import query
 from .. import exceptions
 from .. import utils
+from .. import managers
 
 
 class PythonPath(query.Path):
@@ -14,9 +15,13 @@ class PythonModel(base.BaseModel):
 
     @classmethod
     def load(cls, values):
-        return PythonQuerySet(values, model=cls)
+        return PythonManager(values=values, model=cls)
 
-class PythonQuerySet(query.QuerySet):
+class PythonManager(managers.Manager):
+
+    def __init__(self, *args, **kwargs):
+        self._values = kwargs.pop('values')
+        super(PythonManager, self).__init__(*args, **kwargs)
 
     def get(self, *args, **kwargs):
         final_query = self.build_query(*args, **kwargs)
@@ -34,23 +39,23 @@ class PythonQuerySet(query.QuerySet):
         return first_match
 
 
-    def _raw_data_iterator(self):
-        if not self.query:
-            for obj in self._iter_data:
+    def _raw_data_iterator(self, query):
+        if not query:
+            for obj in self._values:
                 yield obj
         else:
-            for obj in self._iter_data:
-                if self.query._test(obj):
+            for obj in self._values:
+                if query._test(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
 
-    def execute_query(self):
-        iterator = self._raw_data_iterator()
+    def execute_query(self, query, orderings, **kwargs):
+        iterator = self._raw_data_iterator(query)
 
-        if self.orderings:
+        if orderings:
             random_value = lambda v: random.random()
 
-            for ordering in reversed(self.orderings):
+            for ordering in reversed(orderings):
                 # We loop in reverse order because we found no other way to handle multiple sorting
                 # in different directions right now
 
@@ -59,25 +64,23 @@ class PythonQuerySet(query.QuerySet):
                     continue
                 iterator = sorted(iterator, key=ordering.path.get, reverse=ordering.reverse)
 
+        if kwargs.get('distinct', False):
+            iterator = utils.unique_everseen(iterator)
         return iterator
 
-    def distinct(self):
-        return self._clone(utils.unique_everseen(self.data))
-
-    def backend_values_list(self, paths, flat=False):
-        if flat:
+    def values_list(self, paths, *args, **kwargs):
+        data = self.execute_query(kwargs['query'], kwargs['orderings'])
+        if kwargs.get('flat', False):
             getter = lambda val: paths[0].get(val)
         else:
             getter = lambda val: tuple(path.get(val) for path in paths)
 
-        return self._clone(  # I believe in this case we should return raw data not query_set
-            map(getter, self.data)
-        )
+        return PythonModel.load(map(getter, data)).all()
 
-    def backend_values(self, paths):
-        return self._clone(  # I believe in this case we should return raw data not query_set
-            map(
+    def values(self, paths, *args, **kwargs):
+        data = self.execute_query(kwargs['query'], kwargs['orderings'])
+        return PythonModel.load(map(
                 lambda val: {str(path):path.get(val) for path in paths},
-                self.data
+                data
             )
-        )
+        ).all()

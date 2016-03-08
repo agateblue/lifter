@@ -237,9 +237,9 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.filter(TestModel.a == 1).values_list(TestModel.order, TestModel.a), expected)
 
     def test_distinct(self):
-        self.assertEqual(self.manager.values_list(TestModel.a, flat=True), [1, 1, 2, 2])
-        self.assertEqual(self.manager.values_list(TestModel.a, flat=True).distinct(), [1, 2])
-        self.assertEqual(self.manager.values_list(TestModel.parent, flat=True).distinct(), self.PARENTS)
+        self.assertEqual(self.manager.all().values_list(TestModel.a, flat=True), [1, 1, 2, 2])
+        self.assertEqual(self.manager.all().values_list(TestModel.a, flat=True).distinct(), [1, 2])
+        self.assertEqual(self.manager.all().values_list(TestModel.parent, flat=True).distinct(), self.PARENTS)
     #
     # def test_can_check_nested_iterables(self):
     #     users = [

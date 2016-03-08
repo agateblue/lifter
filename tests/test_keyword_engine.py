@@ -236,9 +236,9 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.filter(a=1).values_list('order', 'a'), expected)
 
     def test_distinct(self):
-        self.assertEqual(self.manager.values_list('a', flat=True), [1, 1, 2, 2])
-        self.assertEqual(self.manager.values_list('a', flat=True).distinct(), [1, 2])
-        self.assertEqual(self.manager.values_list('parent', flat=True).distinct(), self.PARENTS)
+        self.assertEqual(self.manager.all().values_list('a', flat=True), [1, 1, 2, 2])
+        self.assertEqual(self.manager.all().values_list('a', flat=True).distinct(), [1, 2])
+        self.assertEqual(self.manager.all().values_list('parent', flat=True).distinct(), self.PARENTS)
 
 class TestLookups(TestBase):
     def test_gt(self):
