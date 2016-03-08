@@ -10,7 +10,7 @@ Manager = managers.Manager
 from .exceptions import *
 from . import exceptions
 
-from .query import Path, Query, QuerySet
+# from .query import Path, Query, QuerySet
 
 from . import lookups
 from .lookups import *
@@ -19,4 +19,6 @@ from .aggregates import *
 # from . import models
 
 def load(values, *args, **kwargs):
-    return Manager(values, *args, **kwargs)
+    from .backends.python import PythonModel, PythonQuerySet
+    kwargs.setdefault('queryset_class', PythonQuerySet)
+    return Manager(values, model=PythonModel, *args, **kwargs)

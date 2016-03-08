@@ -18,7 +18,7 @@ class Path(object):
         self.path = path or []
         self._reversed = False # used for order by
         self._getters = []
-        
+
     def __getattr__(self, part):
         return self.__class__(self.path + [part])
 
@@ -41,7 +41,7 @@ class Path(object):
 
     @property
     def _query(self):
-        return Query(self)
+        return self.query_class(self)
 
     def __eq__(self, other):
         return self._query.__eq__(other)
@@ -190,18 +190,20 @@ class Query(object):
 
     # __contains__, matches, search, any, all, exists probably
 
-def lookup_to_path(lookup):
-    path = Path()
+def lookup_to_path(lookup, path_class):
+    path = path_class()
     for part in lookup.replace('__', '.').split('.'):
         path = getattr(path, part)
     return path
 
 class QuerySet(object):
-    def __init__(self, data, query=None):
+    def __init__(self, data, model, query=None, orderings=None):
+        self.model = model
         self.query = query
         self._populated = False
         self._iter_data = data
         self._data = []
+        self.orderings = orderings
 
     def __repr__(self):
         suffix = ''
@@ -217,19 +219,13 @@ class QuerySet(object):
         return self._fetch_all()
 
     def _fetch_all(self):
-        self._data = [item for item in self.iterator()]
+        iterator = self.iterator()
+        self._data = [item for item in iterator]
         self._populated = True
         return self._data
 
     def iterator(self):
-        if not self.query:
-            for obj in self._iter_data:
-                yield obj
-        else:
-            for obj in self._iter_data:
-                if self.query._test(obj):
-                    yield obj
-        # return filter(self.query, self._iter_data)
+        return self.execute_query()
 
     def __eq__(self, other):
         return self.data == other
@@ -244,27 +240,13 @@ class QuerySet(object):
     def __getitem__(self, index):
         return self.data[index]
 
-    def _clone(self, source_data=None, query=None):
+    def _clone(self, source_data=None, query=None, orderings=None):
         source_data = source_data or self._iter_data
-        return self.__class__(source_data, query=query)
+        orderings = orderings or self.orderings
+        return self.__class__(source_data, model=self.model, query=query, orderings=orderings)
 
     def all(self):
         return self._clone()
-
-    def get(self, *args, **kwargs):
-        final_query = self.build_query(*args, **kwargs)
-        first_match = None
-        for match in filter(final_query, self.data):
-            # Little hack to avoid looping over the whole results set
-            if not first_match:
-                first_match = match
-                continue
-            raise exceptions.MultipleObjectsReturned()
-
-        if not first_match:
-            raise exceptions.DoesNotExist()
-
-        return first_match
 
     def first(self):
         try:
@@ -303,7 +285,7 @@ class QuerySet(object):
         """Convert django-s like lookup to SQLAlchemy ones"""
         query = None
         for lookup, value in kwargs.items():
-            path = lookup_to_path(lookup)
+            path = lookup_to_path(lookup, path_class=self.model.path_class)
 
             if hasattr(value, '__call__'):
                 q = path.test(value)
@@ -323,7 +305,6 @@ class QuerySet(object):
 
     def filter(self, *args, **kwargs):
         final_query = self.build_query(*args, **kwargs)
-
         return self._clone(query=self._combine_query(final_query))
 
     def exclude(self, *args, **kwargs):
@@ -355,59 +336,36 @@ class QuerySet(object):
 
         return orderings
 
+    def get(self, *args, **kwargs):
+        raise NotImplementedError()
+
     def order_by(self, *orderings):
         parsed_orderings = self._parse_ordering(*orderings)
-        # ordering = parsed_orderings[0]
-
-        random_value = lambda v: random.random()
-
-        sorter = self.iterator()
-        for ordering in reversed(parsed_orderings):
-            # We loop in reverse order because we found no other way to handle multiple sorting
-            # in different directions right now
-
-            if ordering.random:
-                sorter = sorted(sorter, key=random_value)
-                continue
-            sorter = sorted(sorter, key=ordering.path.get, reverse=ordering.reverse)
-
-        return self._clone(sorter)
+        return self._clone(orderings=parsed_orderings)
 
     def arg_to_path(self, arg):
         path = arg
         if isinstance(arg, str):
-            path = lookup_to_path(arg)
+            path = lookup_to_path(arg, self.model.path_class)
         return path
 
     def values(self, *args):
         if not args:
             raise ValueError('Empty values')
 
-        final_paths = [self.arg_to_path(arg) for arg in args]
-
-        return self._clone(  # I believe in this case we should return raw data not query_set
-            map(
-                lambda val: {str(path):path.get(val) for path in final_paths},
-                self.data
-            )
-        )
+        paths = [self.arg_to_path(arg) for arg in args]
+        return self.backend_values(paths)
 
     def values_list(self, *args, **kwargs):
         if not args:
             raise ValueError('Empty values')
 
-        final_paths = [self.arg_to_path(arg) for arg in args]
+        paths = [self.arg_to_path(arg) for arg in args]
 
-        getter = lambda val: tuple(path.get(val) for path in final_paths)
-
-        if kwargs.get('flat', False) and len(final_paths) > 1:
+        if kwargs.get('flat', False) and len(paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
-        elif kwargs.get('flat', False):
-            getter = lambda val: final_paths[0].get(val)
 
-        return self._clone(  # I believe in this case we should return raw data not query_set
-            map(getter, self.data)
-        )
+        return self.backend_values_list(paths, kwargs.get('flat', False))
 
     def _build_aggregate(self, aggregation, function_name=None, key=None):
         if key:
@@ -429,7 +387,7 @@ class QuerySet(object):
                 path, func = conf
             except TypeError:
                 # Django-like aggregate
-                path = lookup_to_path(conf.attr_name)
+                path = lookup_to_path(conf.attr_name, path_class=self.model.path_class)
                 func = conf.aggregate
                 function_name = conf.name
 
@@ -443,7 +401,7 @@ class QuerySet(object):
                 path, func = conf
             except TypeError:
                 # Django-like aggregate
-                path = lookup_to_path(conf.attr_name)
+                path = lookup_to_path(conf.attr_name, self.model.path_class)
                 func = conf.aggregate
                 function_name = conf.name
 
@@ -458,7 +416,7 @@ class QuerySet(object):
         return data
 
     def distinct(self):
-        return self._clone(utils.unique_everseen(self.data))
+        raise NotImplementedError()
 
     def exists(self):
         return len(self) > 0
