@@ -60,14 +60,14 @@ class TestQueries(TestBase):
         self.assertEqual(list(self.dict_manager.all()), self.DICTS)
 
     def test_can_get_using_attribute(self):
-        self.assertEqual(self.manager.get(TestModel.name == 'test_1'), self.OBJECTS[0])
-        self.assertEqual(self.dict_manager.get(TestModel.name == 'test_1'), self.DICTS[0])
+        self.assertEqual(self.manager.all().get(TestModel.name == 'test_1'), self.OBJECTS[0])
+        self.assertEqual(self.dict_manager.all().get(TestModel.name == 'test_1'), self.DICTS[0])
 
     def test_can_filter(self):
         self.assertEqual(self.manager.filter(TestModel.a == 1), self.OBJECTS[:2])
 
     def test_get_exclude_and_filter_combine_queries_to_and_by_default(self):
-        self.assertEqual(self.manager.get(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[3])
+        self.assertEqual(self.manager.all().get(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[3])
         self.assertEqual(self.manager.filter(TestModel.order > 2, TestModel.a == 2), [self.OBJECTS[3]])
         self.assertEqual(self.manager.exclude(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[:3])
 
@@ -115,11 +115,11 @@ class TestQueries(TestBase):
     def test_related_lookups(self):
         self.assertEqual(self.manager.filter(TestModel.parent.name == 'parent_1'), self.OBJECTS[:2])
         self.assertEqual(self.manager.exclude(TestModel.parent.name == 'parent_1'), self.OBJECTS[2:])
-        self.assertEqual(self.manager.get((TestModel.parent.name == 'parent_1') & (TestModel.order == 2)), self.OBJECTS[0])
+        self.assertEqual(self.manager.all().get((TestModel.parent.name == 'parent_1') & (TestModel.order == 2)), self.OBJECTS[0])
 
         self.assertEqual(self.dict_manager.filter(TestModel.parent.name == 'parent_1'), self.DICTS[:2])
         self.assertEqual(self.dict_manager.exclude(TestModel.parent.name == 'parent_1'), self.DICTS[2:])
-        self.assertEqual(self.dict_manager.get((TestModel.parent.name == 'parent_1') & (TestModel.order == 2)), self.DICTS[0])
+        self.assertEqual(self.dict_manager.all().get((TestModel.parent.name == 'parent_1') & (TestModel.order == 2)), self.DICTS[0])
 
 
     def test_exception_raised_on_missing_attr(self):
@@ -192,17 +192,17 @@ class TestQueries(TestBase):
 
     def test_get_raise_exception_on_multiple_objects_returned(self):
         with self.assertRaises(lifter.MultipleObjectsReturned):
-            self.manager.get(TestModel.a == 1)
+            self.manager.all().get(TestModel.a == 1)
 
         with self.assertRaises(lifter.MultipleObjectsReturned):
-            self.dict_manager.get(TestModel.a == 1)
+            self.dict_manager.all().get(TestModel.a == 1)
 
     def test_get_raise_exception_on_does_not_exist(self):
         with self.assertRaises(lifter.DoesNotExist):
-            self.manager.get(TestModel.a == 123)
+            self.manager.all().get(TestModel.a == 123)
 
         with self.assertRaises(lifter.DoesNotExist):
-            self.dict_manager.get(TestModel.a == 123)
+            self.dict_manager.all().get(TestModel.a == 123)
 
     def test_can_filter_using_callable(self):
         self.assertEqual(self.manager.filter(TestModel.order.test(lambda v: v in [1, 3])), [self.OBJECTS[1], self.OBJECTS[2]])

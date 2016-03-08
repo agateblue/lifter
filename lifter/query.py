@@ -1,4 +1,5 @@
 import itertools
+import operator
 from collections import Iterator
 import random
 from . import exceptions
@@ -14,6 +15,10 @@ def filter_values(func, values):
             yield value
 
 class Path(object):
+
+    class DoesNotExist(object):
+        pass
+
     def __init__(self, path=None):
         self.path = path or []
         self._reversed = False # used for order by
@@ -27,49 +32,36 @@ class Path(object):
     def __str__(self):
         return '.'.join(self.path)
 
-    def get(self, data):
-        if not self._getters:
-            # Since this is one of the most called method in lifter, we avoid
-            # any call to other methods here
-            for part in self.path:
-                self._getters.append(utils.attrgetter(part))
-
-        for getter in self._getters:
-            data = getter(data)
-
-        return data
-
-    @property
-    def _query(self):
-        return Query(self)
-
     def __eq__(self, other):
-        return self._query.__eq__(other)
+        return Query(path=self, test=operator.eq, test_args=[other])
 
     def __ne__(self, other):
-        return self._query.__ne__(other)
+        return Query(path=self, test=operator.ne, test_args=[other])
 
     def __gt__(self, other):
-        return self._query.__gt__(other)
+        return Query(path=self, test=operator.gt, test_args=[other])
 
     def __ge__(self, other):
-        return self._query.__ge__(other)
+        return Query(path=self, test=operator.ge, test_args=[other])
 
     def __lt__(self, other):
-        return self._query.__lt__(other)
+        return Query(path=self, test=operator.lt, test_args=[other])
 
     def __le__(self, other):
-        return self._query.__le__(other)
+        return Query(path=self, test=operator.le, test_args=[other])
 
     def __invert__(self):
         """For reverse order_by"""
         return Ordering(self, reverse=True)
 
-    def test(self, func):
-        return self._query.test(func)
+    def test(self, func, *args, **kwargs):
+        return Query(path=self, test=func, test_args=args, test_kwargs=kwargs)
 
     def exists(self):
-        return self._query.exists()
+        return Query(path=self, test=check_existence, path_kwargs={'soft_fail': True})
+
+def check_existence(v):
+    return v != Path.DoesNotExist
 
 class Ordering(object):
 
@@ -95,92 +87,55 @@ class Aggregation(object):
         return self.func(data)
 
 
-class QueryImpl(object):
-    def __init__(self, test, hashval):
-        self._test = test
-        self.hashval = hashval
-
-    def match(self, val):
-        return self._test(val)
-
-    def __repr__(self):
-        template = 'QueryImpl({0} {1})' if len(self.hashval) == 2 else 'QueryImpl({1} {0} {2})'
-
-        return template.format(*self.hashval)
-
-    def __call__(self, val):
-        return self._test(val)
+class BaseQuery(object):
+    def __init__(self, *args, **kwargs):
+        self.inverted = kwargs.pop('inverted', False)
 
     def __and__(self, other):
-        return QueryImpl(
-            lambda val: self(val) and other(val),
-            ('&', self, other)
-        )
+        return QueryWrapper('AND', self, other)
 
     def __or__(self, other):
-        return QueryImpl(
-            lambda val: self(val) or other(val),
-            ('|', self, other)
-        )
+        return QueryWrapper('OR', self, other)
 
     def __invert__(self):
-        return QueryImpl(
-            lambda val: not self(val),
-            ('not', self, '')
-        )
-
-class BaseQuery(object):
-    pass
+        return self.clone(inverted=not self.inverted)
 
 class QueryWrapper(BaseQuery):
-    pass
+    def __init__(self, operator, *args, **kwargs):
+        super(QueryWrapper, self).__init__(**kwargs)
+        self.operator = operator
+        self.subqueries = args
+
+    def __repr__(self):
+        return '<QueryWrapper {0} ({1})>'.format(self.operator, self.operator.join([repr(self.subqueries)]))
+
+    def clone(self, **kwargs):
+        kwargs.setdefault('operator', self.operator)
+        kwargs.setdefault('subqueries', self.subqueries)
+        kwargs.setdefault('inverted', self.inverted)
+        return self.__class__(**kwargs)
 
 class Query(BaseQuery):
     """An abstract way to represent query, that will be compiled to an actual query by the manager"""
-    def __init__(self, path):#, test, *test_args, **test_kwargs):
+    def __init__(self, path, test, test_args=[], test_kwargs={}, path_kwargs={}, **kwargs):
+        self.path_kwargs = path_kwargs
+        super(Query, self).__init__(**kwargs)
         self.path = path
-        # self.test = test
-        # self.test_args = test_args
-        # self.test_kwargs = test_kwargs
+        self.test = test
+        self.test_args = test_args
+        self.test_kwargs = test_kwargs
 
-    def _generate_test(self, test, hashval):
-        def impl(value):
-            return test(self.path.get(value))
+    def __repr__(self):
+        return '<Query {0}, {1}, {2}, {3}>'.format(self.path, self.test, self.test_args, self.test_kwargs)
 
-        return QueryImpl(impl, hashval)
-
-    def __call__(self, callable):
-        raise NotImplementedError()
-
-    def __eq__(self, other):
-        return self._generate_test(
-            lambda val: val == other, ('==', self.path, other)
-        )
-
-    def __ne__(self, other):
-        return self._generate_test(
-            lambda val: val != other, ('!=', self.path, other)
-        )
-
-    def __gt__(self, other):
-        return self._generate_test(
-            lambda val: val > other, ('>', self.path, other)
-        )
-
-    def __ge__(self, other):
-        return self._generate_test(
-            lambda val: val >= other, ('>=', self.path, other)
-        )
-
-    def __lt__(self, other):
-        return self._generate_test(
-            lambda val: val < other, ('<', self.path, other)
-        )
-
-    def __le__(self, other):
-        return self._generate_test(
-            lambda val: val <= other, ('<=', self.path, other)
-        )
+    def clone(self, **kwargs):
+        kwargs.setdefault('path', self.path)
+        kwargs.setdefault('test', self.test)
+        kwargs.setdefault('test_args', self.test_args)
+        kwargs.setdefault('test_kwargs', self.test_kwargs)
+        kwargs.setdefault('inverted', self.inverted)
+        kwargs.setdefault('path_kwargs', self.path_kwargs)
+        return self.__class__(**kwargs)
 
     def test(self, func):
         return self._generate_test(
@@ -354,7 +309,8 @@ class QuerySet(object):
         return orderings
 
     def get(self, *args, **kwargs):
-        raise NotImplementedError()
+        qs = self.filter(*args, **kwargs)
+        return qs.manager.get(**qs.get_whole_query_kwargs())
 
     def order_by(self, *orderings):
         parsed_orderings = self._parse_ordering(*orderings)

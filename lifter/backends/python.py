@@ -1,3 +1,4 @@
+import operator
 
 from . import base
 from .. import query
@@ -7,7 +8,22 @@ from .. import managers
 
 
 class PythonPath(query.Path):
-    pass
+
+    def get(self, data, **kwargs):
+        if not self._getters:
+            # Since this is one of the most called method in lifter, we avoid
+            # any call to other methods here
+            for part in self.path:
+                self._getters.append(utils.attrgetter(part))
+
+        try:
+            for getter in self._getters:
+                data = getter(data)
+        except exceptions.MissingAttribute:
+            if kwargs.get('soft_fail', False):
+                return query.Path.DoesNotExist
+            raise
+        return data
 
 class PythonModel(base.BaseModel):
     __metaclass__ = base.BaseModelMeta
@@ -17,16 +33,52 @@ class PythonModel(base.BaseModel):
     def load(cls, values):
         return PythonManager(values=values, model=cls)
 
+
+class QueryImpl(object):
+    def __init__(self, base_query):
+        self.base_query = base_query
+        self.test = self.setup_test()
+
+    def setup_test(self):
+        print(self.base_query)
+        try:
+            # query wrapper
+            subqueries = [QueryImpl(subquery) for subquery in self.base_query.subqueries]
+
+            def wrapper(obj):
+                for q in subqueries:
+                    if not q(obj):
+                        return False
+                return True
+            return wrapper
+        except AttributeError:
+            # Leaf query
+            test = self.base_query.test
+            args, kwargs = self.base_query.test_args, self.base_query.test_kwargs
+            inverted = self.base_query.inverted
+            path_kwargs = self.base_query.path_kwargs
+            def leaf_query(obj):
+                value = self.base_query.path.get(obj, **path_kwargs)
+                result = test(value, *args, **kwargs)
+                if inverted:
+                    return not result
+                return result
+            return leaf_query
+
+    def __call__(self, obj):
+        return self.test(obj)
+
+
 class PythonManager(managers.Manager):
 
     def __init__(self, *args, **kwargs):
         self._values = kwargs.pop('values')
         super(PythonManager, self).__init__(*args, **kwargs)
 
-    def get(self, *args, **kwargs):
-        final_query = self.build_query(*args, **kwargs)
+    def get(self, query, orderings, **kwargs):
+        iterator = self.execute_query(query, orderings=None)
         first_match = None
-        for match in filter(final_query, self.data):
+        for match in iterator:
             # Little hack to avoid looping over the whole results set
             if not first_match:
                 first_match = match
@@ -39,18 +91,22 @@ class PythonManager(managers.Manager):
         return first_match
 
 
-    def _raw_data_iterator(self, query):
-        if not query:
+    def _raw_data_iterator(self, compiled_query):
+        if not compiled_query:
             for obj in self._values:
                 yield obj
         else:
             for obj in self._values:
-                if query._test(obj):
+                if compiled_query(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
 
     def execute_query(self, query, orderings, **kwargs):
-        iterator = self._raw_data_iterator(query)
+        compiled_query = None
+        if query:
+            compiled_query =  QueryImpl(query)
+
+        iterator = self._raw_data_iterator(compiled_query)
 
         if orderings:
             random_value = lambda v: random.random()
