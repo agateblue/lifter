@@ -4,11 +4,9 @@ from .. import query
 from .. import exceptions
 from .. import utils
 
-class PythonQuery(query.Query):
-    pass
 
 class PythonPath(query.Path):
-    query_class = PythonQuery
+    pass
 
 class PythonModel(base.BaseModel):
     __metaclass__ = base.BaseModelMeta

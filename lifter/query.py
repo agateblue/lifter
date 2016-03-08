@@ -41,7 +41,7 @@ class Path(object):
 
     @property
     def _query(self):
-        return self.query_class(self)
+        return Query(self)
 
     def __eq__(self, other):
         return self._query.__eq__(other)
@@ -129,10 +129,19 @@ class QueryImpl(object):
             ('not', self, '')
         )
 
+class BaseQuery(object):
+    pass
 
-class Query(object):
-    def __init__(self, path):
+class QueryWrapper(BaseQuery):
+    pass
+
+class Query(BaseQuery):
+    """An abstract way to represent query, that will be compiled to an actual query by the backend"""
+    def __init__(self, path):#, test, *test_args, **test_kwargs):
         self.path = path
+        # self.test = test
+        # self.test_args = test_args
+        # self.test_kwargs = test_kwargs
 
     def _generate_test(self, test, hashval):
         def impl(value):
@@ -354,8 +363,12 @@ class QuerySet(object):
             raise ValueError('Empty values')
 
         paths = [self.arg_to_path(arg) for arg in args]
-        return self.backend_values(paths)
+        return self.execute_from_backend('values', paths)
 
+    def execute_from_backend(self, func_name, *args, **kwargs):
+        backend_func = getattr(self.backend, func_name)
+        return backend_func(self, *args, **kwargs)
+        
     def values_list(self, *args, **kwargs):
         if not args:
             raise ValueError('Empty values')
@@ -365,7 +378,7 @@ class QuerySet(object):
         if kwargs.get('flat', False) and len(paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
 
-        return self.backend_values_list(paths, kwargs.get('flat', False))
+        return self.execute_from_backend('values_list', paths, kwargs.get('flat', False))
 
     def _build_aggregate(self, aggregation, function_name=None, key=None):
         if key:
