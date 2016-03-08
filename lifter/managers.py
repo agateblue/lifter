@@ -16,7 +16,7 @@ class Manager(object):
 
     def values_list(self, *args, **kwargs):
         raise NotImplementedError()
-
+    
     def values(self, *args, **kwargs):
         raise NotImplementedError()
 

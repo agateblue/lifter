@@ -52,8 +52,10 @@ class TestQueries(TestBase):
 
     def test_can_match_object(self):
         query = TestModel.order == 1
-        self.assertTrue(query.match(self.OBJECTS[2]))
-        self.assertFalse(query.match(self.OBJECTS[3]))
+        manager = TestModel.load([])
+
+        self.assertTrue(manager.match(query, self.OBJECTS[2]))
+        self.assertFalse(manager.match(query, self.OBJECTS[3]))
 
     def test_default_order(self):
         self.assertEqual(list(self.manager.all()), self.OBJECTS)
@@ -68,8 +70,14 @@ class TestQueries(TestBase):
 
     def test_get_exclude_and_filter_combine_queries_to_and_by_default(self):
         self.assertEqual(self.manager.all().get(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[3])
-        self.assertEqual(self.manager.filter(TestModel.order > 2, TestModel.a == 2), [self.OBJECTS[3]])
-        self.assertEqual(self.manager.exclude(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[:3])
+        self.assertEqual(self.manager.all().filter(TestModel.order > 2, TestModel.a == 2), [self.OBJECTS[3]])
+        self.assertEqual(self.manager.all().exclude(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[:3])
+
+    def test_can_combine_queries_using_or(self):
+        self.assertEqual(self.manager.all().filter((TestModel.order > 2) | (TestModel.a == 2)), self.OBJECTS[1:])
+        self.assertEqual(self.manager.all().exclude((TestModel.order > 2) | (TestModel.a == 2)), [self.OBJECTS[0]])
+        self.assertEqual(self.manager.all().exclude(~((TestModel.order > 2) | (TestModel.a == 2))), self.OBJECTS[1:])
+        self.assertEqual(self.manager.all().exclude(~(TestModel.order > 2) | (TestModel.a == 2)), [self.OBJECTS[1]])
 
     def test_queryset_is_lazy(self):
         with mock.patch('lifter.query.QuerySet._fetch_all') as fetch:

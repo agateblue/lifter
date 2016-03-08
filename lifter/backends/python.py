@@ -33,6 +33,21 @@ class PythonModel(base.BaseModel):
     def load(cls, values):
         return PythonManager(values=values, model=cls)
 
+def get_wrapper(query):
+    inverted = query.inverted
+    subqueries = [QueryImpl(subquery) for subquery in query.subqueries]
+
+    if query.operator == 'AND':
+        matcher = all
+    else:
+        matcher = any
+
+    def wrapper(obj):
+        result =  matcher((q(obj) for q in subqueries))
+        if inverted:
+            return not result
+        return result
+    return wrapper
 
 class QueryImpl(object):
     def __init__(self, base_query):
@@ -40,17 +55,9 @@ class QueryImpl(object):
         self.test = self.setup_test()
 
     def setup_test(self):
-        print(self.base_query)
         try:
             # query wrapper
-            subqueries = [QueryImpl(subquery) for subquery in self.base_query.subqueries]
-
-            def wrapper(obj):
-                for q in subqueries:
-                    if not q(obj):
-                        return False
-                return True
-            return wrapper
+            return get_wrapper(self.base_query)
         except AttributeError:
             # Leaf query
             test = self.base_query.test
@@ -100,6 +107,10 @@ class PythonManager(managers.Manager):
                 if compiled_query(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
+
+    def match(self, query, obj):
+        compiled_query =  QueryImpl(query)
+        return compiled_query(obj)
 
     def execute_query(self, query, orderings, **kwargs):
         compiled_query = None

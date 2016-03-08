@@ -107,13 +107,19 @@ class QueryWrapper(BaseQuery):
         self.subqueries = args
 
     def __repr__(self):
-        return '<QueryWrapper {0} ({1})>'.format(self.operator, self.operator.join([repr(self.subqueries)]))
+        if self.inverted:
+            inverted_repr = 'NOT '
+        else:
+            inverted_repr = ''
+        return '<QueryWrapper {0}{1} ({2})>'.format(inverted_repr, self.operator, self.operator.join([repr(self.subqueries)]))
 
     def clone(self, **kwargs):
-        kwargs.setdefault('operator', self.operator)
-        kwargs.setdefault('subqueries', self.subqueries)
         kwargs.setdefault('inverted', self.inverted)
-        return self.__class__(**kwargs)
+        new_query = self.__class__(
+            kwargs.get('operator', self.operator),
+            *kwargs.get('subqueries', self.subqueries),
+            **kwargs)
+        return new_query
 
 class Query(BaseQuery):
     """An abstract way to represent query, that will be compiled to an actual query by the manager"""
@@ -126,7 +132,11 @@ class Query(BaseQuery):
         self.test_kwargs = test_kwargs
 
     def __repr__(self):
-        return '<Query {0}, {1}, {2}, {3}>'.format(self.path, self.test, self.test_args, self.test_kwargs)
+        if self.inverted:
+            test_repr = 'NOT {0}'.format(self.test)
+        else:
+            test_repr = repr(self.test)
+        return '<Query {0}, {1}, {2}, {3}>'.format(self.path, test_repr, self.test_args, self.test_kwargs)
 
     def clone(self, **kwargs):
         kwargs.setdefault('path', self.path)
