@@ -128,11 +128,17 @@ class Query(object):
     def __init__(self, path):
         self.path = path
 
-    def _generate_test(self, test, hashval):
-        def impl(value):
-            return test(self.path.get(value))
+    def _get_impl(self, test, **kwargs):
+        def impl(obj):
+            value = self.path.get(obj)
+            if isinstance(value, utils.IterableAttr):
+                return value._resolve_test(test, **kwargs)
+            return test(value)
+        return impl
 
-        return QueryImpl(impl, hashval)
+    def _generate_test(self, test, hashval):
+
+        return QueryImpl(self._get_impl(test), hashval)
 
     def __call__(self, callable):
         raise NotImplementedError()
@@ -173,10 +179,14 @@ class Query(object):
         )
 
     def exists(self):
-        def impl(value):
+        def _base_impl(obj):
+            return True
+
+        base_impl = self._get_impl(lambda obj: True, fail_silently=True)
+
+        def impl(obj):
             try:
-                v = self.path.get(value)
-                return True
+                return base_impl(obj)
             except exceptions.MissingAttribute:
                 return False
 
@@ -370,6 +380,14 @@ class QuerySet(object):
             path = lookup_to_path(arg)
         return path
 
+    def _value_resolver(self, path):
+        def getter(obj):
+            value = path.get(obj)
+            if isinstance(value, utils.IterableAttr):
+                return value.get_resolved_items()
+            return value
+        return getter
+
     def values(self, *args):
         if not args:
             raise ValueError('Empty values')
@@ -378,7 +396,7 @@ class QuerySet(object):
 
         return self._clone(  # I believe in this case we should return raw data not query_set
             map(
-                lambda val: {str(path):path.get(val) for path in final_paths},
+                lambda val: {str(path):self._value_resolver(path)(val) for path in final_paths},
                 self.data
             )
         )
@@ -389,12 +407,12 @@ class QuerySet(object):
 
         final_paths = [self.arg_to_path(arg) for arg in args]
 
-        getter = lambda val: tuple(path.get(val) for path in final_paths)
+        getter = lambda val: tuple(self._value_resolver(path)(val) for path in final_paths)
 
         if kwargs.get('flat', False) and len(final_paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
         elif kwargs.get('flat', False):
-            getter = lambda val: final_paths[0].get(val)
+            getter = lambda val: self._value_resolver(final_paths[0])(val)
 
         return self._clone(  # I believe in this case we should return raw data not query_set
             map(getter, self.data)

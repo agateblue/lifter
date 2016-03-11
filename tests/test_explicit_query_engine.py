@@ -234,54 +234,142 @@ class TestQueries(TestBase):
         self.assertEqual(self.manager.values_list(TestModel.a, flat=True), [1, 1, 2, 2])
         self.assertEqual(self.manager.values_list(TestModel.a, flat=True).distinct(), [1, 2])
         self.assertEqual(self.manager.values_list(TestModel.parent, flat=True).distinct(), self.PARENTS)
-    #
-    # def test_can_check_nested_iterables(self):
-    #     users = [
-    #         {
-    #             'name': 'Kurt',
-    #             'tags': [
-    #                 {'name': 'nice'},
-    #                 {'name': 'friendly'},
-    #             ]
-    #         },
-    #         {
-    #             'name': 'Bill',
-    #             'tags': [
-    #                 {'name': 'friendly'},
-    #             ]
-    #         },
-    #     ]
-    #     manager = lifter.load(users)
-    #     self.assertNotIn(users[1], manager.filter(tags__name='nice'))
-    #     self.assertRaises(ValueError, manager.filter, tags__x='y')
-    #
-    #     companies = [
-    #         {
-    #             'name': 'blackbooks',
-    #             'employees': [
-    #                 {
-    #                     'name': 'Manny',
-    #                     'tags': [
-    #                         {'name': 'nice'},
-    #                         {'name': 'friendly'},
-    #                     ]
-    #                 }
-    #             ]
-    #         },
-    #         {
-    #             'name': 'community',
-    #             'employees': [
-    #                 {
-    #                     'name': 'Britta',
-    #                     'tags': [
-    #                         {'name': 'activist'},
-    #                     ]
-    #                 }
-    #             ]
-    #         }
-    #     ]
-    #     manager = lifter.load(companies)
-    #     self.assertNotIn(companies[1], manager.filter(employees__tags__name='friendly'))
+
+    def test_can_check_nested_iterables(self):
+        users = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {
+                        'name': 'nice',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_2'},
+                        ]
+                    },
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_0'},
+                        ]
+                    },
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_3'},
+                        ]
+                    },
+                ]
+            },
+        ]
+
+        User = lifter.models.Model('User')
+        manager = User.load(users)
+
+        self.assertTrue((User.tags.name == 'nice').match(users[0]))
+        self.assertFalse((User.tags.name == 'nice').match(users[1]))
+        self.assertEqual(manager.filter(User.tags.name == 'nice'), [users[0]])
+        self.assertEqual(manager.filter(User.tags.subtags.name == 'subtag_0'), [users[0]])
+        self.assertEqual(manager.filter(User.tags.subtags.name == 'subtag_1'), [users[0], users[1]])
+        self.assertEqual(manager.filter(User.tags.subtags.name == 'subtag_3'), [users[1]])
+
+        with self.assertRaises(lifter.exceptions.MissingAttribute):
+            manager.filter(User.tags.missing_field == 'test').count()
+
+    def test_conditional_field_inside_nested_iterable(self):
+        families = [
+            {
+                'id': 1,
+                'members': [
+                    {'name': 'son', 'dob':'2/24/2000'},
+                    {'name': 'dad'},
+                ]
+            },
+            {
+                'id': 2,
+                'members': [
+                    {'name': 'forever_alone', 'cats': 12}
+                ]
+            }
+        ]
+        Family = lifter.models.Model('Family')
+        manager = Family.load(families)
+
+        # get families with son/dob members
+        son_dob_families = manager.filter(Family.members.name == 'son', Family.members.dob.exists())
+        self.assertEqual(son_dob_families, [families[0]])
+
+        # keep only son members with dob
+        Member = lifter.models.Model('Member')
+        members = [member for family in son_dob_families for member in family['members']]
+        sons_with_dob = Member.load(members).filter(Member.name == 'son', Member.dob.exists())
+        self.assertEqual(sons_with_dob, [{'name': 'son', 'dob':'2/24/2000'}])
+
+    def test_complex_lookups_inside_nested_iterable(self):
+        users = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {
+                        'name': 'nice',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_2'},
+                        ]
+                    },
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_0'},
+                        ]
+                    },
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_3'},
+                        ]
+                    },
+                ]
+            },
+        ]
+
+        User = lifter.models.Model('User')
+        manager = User.load(users)
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.endswith('ce')))
+        self.assertTrue(qs, [users[0]])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))
+        self.assertTrue(qs ,[users[0], users[1]])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))
+        self.assertTrue(qs, [users[0], users[1]])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))\
+                    .values_list(User.tags.name, flat=True)
+
+        self.assertEqual(qs, [['nice', 'friendly'], ['friendly']])
+
+        qs = manager.filter(User.tags.name.test(lifter.lookups.startswith('fr')))\
+                    .values(User.tags.name)
+        expected = [
+            {'tags.name': ['nice', 'friendly']},
+            {'tags.name': ['friendly']},
+        ]
+        self.assertEqual(qs, expected)
+
 
 class TestLookups(TestBase):
     def test_gt(self):
