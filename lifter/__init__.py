@@ -10,13 +10,14 @@ Manager = managers.Manager
 from .exceptions import *
 from . import exceptions
 
-from .query import Path, Query, QuerySet
+# from .query import Path, Query, QuerySet
 
 from . import lookups
 from .lookups import *
 from .aggregates import *
 
-from . import models
+# from . import models
 
 def load(values, *args, **kwargs):
-    return Manager(values, *args, **kwargs)
+    from .backends.python import PythonModel, PythonManager
+    return PythonManager(values=values, model=PythonModel, *args, **kwargs)
