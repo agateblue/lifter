@@ -29,6 +29,10 @@ class PythonModel(base.BaseModel):
     __metaclass__ = base.BaseModelMeta
     path_class = PythonPath
 
+    def __init__(self, **kwargs):
+        for field_name, value in kwargs.items():
+            setattr(self, field_name, value)
+            
     @classmethod
     def load(cls, values):
         return PythonManager(values=values, model=cls)
@@ -76,12 +80,7 @@ class QueryImpl(object):
         return self.test(obj)
 
 
-class PythonManager(managers.Manager):
-
-    def __init__(self, *args, **kwargs):
-        self._values = kwargs.pop('values')
-        super(PythonManager, self).__init__(*args, **kwargs)
-
+class AbstractPythonManager(managers.Manager):
     def get(self, query, orderings, **kwargs):
         iterator = self.execute_query(query, orderings=None)
         first_match = None
@@ -100,10 +99,10 @@ class PythonManager(managers.Manager):
 
     def _raw_data_iterator(self, compiled_query):
         if not compiled_query:
-            for obj in self._values:
+            for obj in self.get_values():
                 yield obj
         else:
-            for obj in self._values:
+            for obj in self.get_values():
                 if compiled_query(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
@@ -151,3 +150,12 @@ class PythonManager(managers.Manager):
                 data
             )
         ).all()
+
+class PythonManager(AbstractPythonManager):
+
+    def __init__(self, *args, **kwargs):
+        self._values = kwargs.pop('values')
+        super(PythonManager, self).__init__(*args, **kwargs)
+
+    def get_values(self):
+        return self._values

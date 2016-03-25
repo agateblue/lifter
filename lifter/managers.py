@@ -7,6 +7,7 @@ class Manager(object):
         from . import query
         self.model = model
         self.queryset_class = queryset_class or query.QuerySet
+        self.parser = kwargs.pop('parser', None)
 
     def get_queryset(self):
         return self.queryset_class(manager=self, model=self.model)
@@ -16,7 +17,7 @@ class Manager(object):
 
     def values_list(self, *args, **kwargs):
         raise NotImplementedError()
-    
+
     def values(self, *args, **kwargs):
         raise NotImplementedError()
 
