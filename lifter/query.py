@@ -174,7 +174,7 @@ def lookup_to_path(lookup, path_class):
 class Query(object):
     """Will gather all query related data (queried field, ordering, distinct, etc.)
     and be passed to the manager"""
-    def __init__(self, filters=None, orderings=[], action='', **hints):
+    def __init__(self, action, filters=None, orderings=[], **hints):
         self.filters = filters
         self.orderings = orderings
         self.action = action
@@ -200,7 +200,7 @@ class QuerySet(object):
         self._data = []
 
         self.orderings = orderings
-        self.query = query or Query()
+        self.query = query or Query(action='select')
 
         self.distinct_results = distinct
 
@@ -224,7 +224,7 @@ class QuerySet(object):
         return self._data
 
     def iterator(self):
-        return self.manager.execute_query(self.query)
+        return self.manager.execute(self.query)
 
     def __eq__(self, other):
         return self.data == other
@@ -304,12 +304,12 @@ class QuerySet(object):
 
     def filter(self, *args, **kwargs):
         final_filter = self.build_filter(*args, **kwargs)
-        query = self.query.clone(filters=self._combine_query_filters(final_filter))
+        query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
         return self._clone(query=query)
 
     def exclude(self, *args, **kwargs):
         final_filter = ~self.build_filter(*args, **kwargs)
-        query = self.query.clone(filters=self._combine_query_filters(final_filter))
+        query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
         return self._clone(query=query)
 
     def count(self):
@@ -339,7 +339,8 @@ class QuerySet(object):
 
     def get(self, *args, **kwargs):
         qs = self.filter(*args, **kwargs)
-        return qs.manager.get(qs.query)
+        new_query = qs.query.clone(action='select', force_single=True)
+        return qs.manager.execute(new_query)
 
     def order_by(self, *orderings):
         parsed_orderings = self._parse_ordering(*orderings)
@@ -357,8 +358,8 @@ class QuerySet(object):
             raise ValueError('Empty values')
 
         paths = [self.arg_to_path(arg) for arg in args]
-        query = self.query.clone(paths=paths)
-        return self.manager.values(query)
+        query = self.query.clone(action='values', paths=paths, mode='mapping')
+        return self.manager.execute(query)
 
     def values_list(self, *args, **kwargs):
         if not args:
@@ -369,8 +370,8 @@ class QuerySet(object):
         if kwargs.get('flat', False) and len(paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
 
-        query = self.query.clone(paths=paths, flat=kwargs.get('flat'))
-        return self.manager.values_list(query)
+        query = self.query.clone(action='values', paths=paths, mode='iterable', flat=kwargs.get('flat'))
+        return self.manager.execute(query)
 
     def _build_aggregate(self, aggregation, function_name=None, key=None):
         if key:
