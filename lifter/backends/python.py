@@ -32,7 +32,7 @@ class PythonModel(base.BaseModel):
     def __init__(self, **kwargs):
         for field_name, value in kwargs.items():
             setattr(self, field_name, value)
-            
+
     @classmethod
     def load(cls, values):
         return PythonManager(values=values, model=cls)
@@ -81,8 +81,8 @@ class QueryImpl(object):
 
 
 class AbstractPythonManager(managers.Manager):
-    def get(self, query, orderings, **kwargs):
-        iterator = self.execute_query(query, orderings=None)
+    def get(self, query):
+        iterator = self.execute_query(query)
         first_match = None
         for match in iterator:
             # Little hack to avoid looping over the whole results set
@@ -97,13 +97,13 @@ class AbstractPythonManager(managers.Manager):
         return first_match
 
 
-    def _raw_data_iterator(self, compiled_query):
-        if not compiled_query:
+    def _raw_data_iterator(self, compiled_filters):
+        if not compiled_filters:
             for obj in self.get_values():
                 yield obj
         else:
             for obj in self.get_values():
-                if compiled_query(obj):
+                if compiled_filters(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
 
@@ -111,17 +111,16 @@ class AbstractPythonManager(managers.Manager):
         compiled_query =  QueryImpl(query)
         return compiled_query(obj)
 
-    def execute_query(self, query, orderings, **kwargs):
-        compiled_query = None
-        if query:
-            compiled_query =  QueryImpl(query)
+    def execute_query(self, query):
+        compiled_filters = None
+        if query.filters:
+            compiled_filters =  QueryImpl(query.filters)
 
-        iterator = self._raw_data_iterator(compiled_query)
-
-        if orderings:
+        iterator = self._raw_data_iterator(compiled_filters)
+        if query.orderings:
             random_value = lambda v: random.random()
 
-            for ordering in reversed(orderings):
+            for ordering in reversed(query.orderings):
                 # We loop in reverse order because we found no other way to handle multiple sorting
                 # in different directions right now
 
@@ -130,23 +129,23 @@ class AbstractPythonManager(managers.Manager):
                     continue
                 iterator = sorted(iterator, key=ordering.path.get, reverse=ordering.reverse)
 
-        if kwargs.get('distinct', False):
+        if query.hints.get('distinct', False):
             iterator = utils.unique_everseen(iterator)
         return iterator
 
-    def values_list(self, paths, *args, **kwargs):
-        data = self.execute_query(kwargs['query'], kwargs['orderings'])
-        if kwargs.get('flat', False):
-            getter = lambda val: paths[0].get(val)
+    def values_list(self, query):
+        data = self.execute_query(query)
+        if query.hints.get('flat', False):
+            getter = lambda val: query.hints['paths'][0].get(val)
         else:
-            getter = lambda val: tuple(path.get(val) for path in paths)
+            getter = lambda val: tuple(path.get(val) for path in query.hints['paths'])
 
         return PythonModel.load(map(getter, data)).all()
 
-    def values(self, paths, *args, **kwargs):
-        data = self.execute_query(kwargs['query'], kwargs['orderings'])
+    def values(self, query):
+        data = self.execute_query(query)
         return PythonModel.load(map(
-                lambda val: {str(path):path.get(val) for path in paths},
+                lambda val: {str(path):path.get(val) for path in query.hints['paths']},
                 data
             )
         ).all()

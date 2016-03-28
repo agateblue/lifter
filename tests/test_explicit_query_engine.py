@@ -248,6 +248,15 @@ class TestQueries(TestBase):
         self.assertEqual(self.manager.all().values_list(TestModel.a, flat=True), [1, 1, 2, 2])
         self.assertEqual(self.manager.all().values_list(TestModel.a, flat=True).distinct(), [1, 2])
         self.assertEqual(self.manager.all().values_list(TestModel.parent, flat=True).distinct(), self.PARENTS)
+
+    # def test_can_get_query_from_queryset(self):
+    #
+    #     qs = self.manager.filter(TestModel.a == 1).order_by(~TestModel.a)
+    #     expected = {
+    #         'filter': TestModel.a == 1,
+    #         'ordering': TestModel.a,
+    #     }
+    #     self.assertEqual(qs.base_query, expected)
     #
     # def test_can_check_nested_iterables(self):
     #     users = [
