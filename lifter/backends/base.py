@@ -5,3 +5,7 @@ class BaseModelMeta(type):
 
 class BaseModel(object):
     __metaclass__ = BaseModelMeta
+
+    def __init__(self, **kwargs):
+        for field_name, value in kwargs.items():
+            setattr(self, field_name, value)

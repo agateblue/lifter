@@ -29,10 +29,6 @@ class PythonModel(base.BaseModel):
     __metaclass__ = base.BaseModelMeta
     path_class = PythonPath
 
-    def __init__(self, **kwargs):
-        for field_name, value in kwargs.items():
-            setattr(self, field_name, value)
-
     @classmethod
     def load(cls, values):
         return PythonManager(values=values, model=cls)
@@ -96,18 +92,6 @@ class AbstractPythonManager(managers.Manager):
         compiled_query =  QueryImpl(query)
         return compiled_query(obj)
 
-    def execute(self, query):
-        mapping = {
-            'select': self.execute_select,
-            'values': self.execute_values,
-            'count': self.execute_count,
-            'exists': self.execute_exists,
-        }
-        try:
-            return mapping[query.action](query)
-        except KeyError:
-            raise ValueError('Unsupported {0} action'.format(query.action))
-
     def select_single(self, iterator):
         first_match = None
         for match in iterator:
@@ -122,16 +106,16 @@ class AbstractPythonManager(managers.Manager):
 
         return first_match
 
-    def execute_exists(self, query):
-        iterator = self.execute_select(query.clone(orderings=None))
+    def handle_exists(self, query):
+        iterator = self.handle_select(query.clone(orderings=None))
         for row in iterator:
             return True
         return False
 
-    def execute_count(self, query):
-        return len(list(self.execute_select(query.clone(orderings=None))))
+    def handle_count(self, query):
+        return len(list(self.handle_select(query.clone(orderings=None))))
 
-    def execute_select(self, query):
+    def handle_select(self, query):
         compiled_filters = None
         if query.filters:
             compiled_filters =  QueryImpl(query.filters)
@@ -156,8 +140,8 @@ class AbstractPythonManager(managers.Manager):
             iterator = utils.unique_everseen(iterator)
         return iterator
 
-    def execute_values(self, query):
-        data = self.execute_select(query)
+    def handle_values(self, query):
+        data = self.handle_select(query)
         if query.hints['mode'] == 'mapping':
             getter = lambda val: {str(path):path.get(val) for path in query.hints['paths']}
         else:

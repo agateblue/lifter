@@ -21,6 +21,8 @@ requirements = [
 
 test_requirements = [
     'mock', # TODO: put package test requirements here
+    'requests',
+    'requests_mock'
 ]
 
 setup(
