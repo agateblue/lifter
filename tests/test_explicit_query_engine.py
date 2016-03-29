@@ -141,6 +141,10 @@ class TestQueries(TestBase):
 
         self.assertEqual(self.dict_manager.filter(TestModel.a == 1).count(), 2)
 
+        # force reload
+        self.assertEqual(self.manager.filter(TestModel.a == 1).count(True), 2)
+
+
     def test_first(self):
         self.assertIsNone(self.manager.filter(TestModel.a == 123).first())
         self.assertIsNotNone(self.manager.filter(TestModel.a == 1).first())
@@ -197,6 +201,10 @@ class TestQueries(TestBase):
 
         self.assertFalse(self.dict_manager.filter(TestModel.a == 123).exists())
         self.assertTrue(self.dict_manager.filter(TestModel.a == 1).exists())
+
+        # force reload from backend
+        self.assertFalse(self.dict_manager.filter(TestModel.a == 123).exists(from_backend=True))
+        self.assertTrue(self.dict_manager.filter(TestModel.a == 1).exists(from_backend=True))
 
     def test_get_raise_exception_on_multiple_objects_returned(self):
         with self.assertRaises(lifter.MultipleObjectsReturned):

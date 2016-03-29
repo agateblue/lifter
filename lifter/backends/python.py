@@ -100,6 +100,8 @@ class AbstractPythonManager(managers.Manager):
         mapping = {
             'select': self.execute_select,
             'values': self.execute_values,
+            'count': self.execute_count,
+            'exists': self.execute_exists,
         }
         try:
             return mapping[query.action](query)
@@ -119,6 +121,15 @@ class AbstractPythonManager(managers.Manager):
             raise exceptions.DoesNotExist()
 
         return first_match
+
+    def execute_exists(self, query):
+        iterator = self.execute_select(query.clone(orderings=None))
+        for row in iterator:
+            return True
+        return False
+
+    def execute_count(self, query):
+        return len(list(self.execute_select(query.clone(orderings=None))))
 
     def execute_select(self, query):
         compiled_filters = None

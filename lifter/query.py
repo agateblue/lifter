@@ -312,7 +312,10 @@ class QuerySet(object):
         query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
         return self._clone(query=query)
 
-    def count(self):
+    def count(self, from_backend=False):
+        if from_backend:
+            new_query = self.query.clone(action='count')
+            return self.manager.execute(new_query)
         return len(self.data)
 
     def _parse_ordering(self, *paths):
@@ -425,5 +428,8 @@ class QuerySet(object):
         new_query = self.query.clone(distinct=True)
         return self._clone(query=new_query)
 
-    def exists(self):
+    def exists(self, from_backend=False):
+        if from_backend:
+            new_query = self.query.clone(action='exists')
+            return self.manager.execute(new_query)
         return len(self) > 0
