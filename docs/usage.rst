@@ -8,7 +8,7 @@ First of all, remember to import lifter in your project:
 
 .. code-block:: python
 
-    import lifter
+    import lifter.models
 
 Creating a model
 ----------------
