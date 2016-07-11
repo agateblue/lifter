@@ -2,6 +2,7 @@ import operator
 
 from . import base
 from .. import query
+from .. import store
 from .. import exceptions
 from .. import utils
 from .. import managers
@@ -30,8 +31,8 @@ class PythonModel(base.BaseModel):
     path_class = PythonPath
 
     @classmethod
-    def load(cls, values):
-        return PythonManager(values=values, model=cls)
+    def load(cls, iterable, **kwargs):
+        return PythonManager(store=iterable, model=cls, **kwargs)
 
 def get_wrapper(query):
     inverted = query.inverted
@@ -76,21 +77,27 @@ class QueryImpl(object):
         return self.test(obj)
 
 
-class AbstractPythonManager(managers.Manager):
+class IterableStore(store.Store):
 
-    def _raw_data_iterator(self, compiled_filters):
+    def __init__(self, values):
+        self.values = values
+
+    def get_all_values(self, query):
+        return self.values
+
+    def get_values(self, query):
+        compiled_filters = None
+        if query.filters:
+            compiled_filters = QueryImpl(query.filters)
+
         if not compiled_filters:
-            for obj in self.get_values():
+            for obj in self.get_all_values(query):
                 yield obj
         else:
-            for obj in self.get_values():
+            for obj in self.get_all_values(query):
                 if compiled_filters(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
-
-    def match(self, query, obj):
-        compiled_query =  QueryImpl(query)
-        return compiled_query(obj)
 
     def select_single(self, iterator):
         first_match = None
@@ -116,11 +123,8 @@ class AbstractPythonManager(managers.Manager):
         return len(list(self.handle_select(query.clone(orderings=None))))
 
     def handle_select(self, query):
-        compiled_filters = None
-        if query.filters:
-            compiled_filters =  QueryImpl(query.filters)
 
-        iterator = self._raw_data_iterator(compiled_filters)
+        iterator = self.get_values(query)
 
         if query.hints.get('force_single', False):
             return self.select_single(iterator)
@@ -151,11 +155,22 @@ class AbstractPythonManager(managers.Manager):
                 getter = lambda val: tuple(path.get(val) for path in query.hints['paths'])
         return PythonModel.load(map(getter, data)).all()
 
+class AbstractPythonManager(managers.Manager):
+
+
+    def match(self, query, obj):
+        compiled_query = QueryImpl(query)
+        return compiled_query(obj)
+
+
 
 class PythonManager(AbstractPythonManager):
 
     def __init__(self, *args, **kwargs):
-        self._values = kwargs.pop('values')
+        store = kwargs.get('store')
+        if not hasattr(store, 'get_all_values'):
+            kwargs['store'] = IterableStore(store)
+
         super(PythonManager, self).__init__(*args, **kwargs)
 
     def get_values(self):

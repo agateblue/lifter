@@ -24,10 +24,11 @@ class Parser(RegexParser):
 
 class TestFileBackend(unittest.TestCase):
     def setUp(self):
-        self.manager = filesystem.FileManager(model=LogEntry, path=DATA_PATH, parser=Parser())
+        self.store = filesystem.FileStore(path=DATA_PATH)
+        self.manager = LogEntry.load(self.store, parser=Parser())
 
     def test_manager_can_load_objects_from_file(self):
-        values = self.manager.get_values()
+        values = self.manager.all()
         self.assertEqual(len(values), 3)
 
         self.assertEqual(values[0].level, 'INFO')
@@ -44,5 +45,5 @@ class TestFileBackend(unittest.TestCase):
 
     def test_can_filter_data_from_file_backend(self):
         self.assertEqual(self.manager.all().count(), 3)
+        self.assertEqual(self.manager.filter(level='ERROR').count(), 1)
         self.assertEqual(self.manager.filter(level='ERROR').first().message, 'Something BAD happened')
-        

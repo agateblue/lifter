@@ -1,12 +1,10 @@
-from .python import AbstractPythonManager
+from .python import IterableStore
 
 
+class FileStore(IterableStore):
+    def __init__(self, path):
+        self.path = path
 
-class FileManager(AbstractPythonManager):
-    def __init__(self, *args, **kwargs):
-        self.path = kwargs.pop('path')
-        super(FileManager, self).__init__(*args, **kwargs)
-
-    def get_values(self):
+    def get_all_values(self, query):
         with open(self.path) as f:
-            return [self.model(**self.parser.parse(line)) for line in f]
+            return [query.hints['model'](**query.hints['parser'].parse(line)) for line in f]
