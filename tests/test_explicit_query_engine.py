@@ -12,7 +12,12 @@ import random
 import sys
 import unittest
 import mock
+
 import lifter.models
+import lifter.aggregates
+import lifter.exceptions
+import lifter.lookups
+from lifter.backends.python import IterableStore
 
 
 class TestObject(object):
@@ -39,23 +44,19 @@ class TestBase(unittest.TestCase):
     DICTS = [o.__dict__ for o in OBJECTS]
 
     def setUp(self):
-        self.manager = lifter.load(self.OBJECTS)
-        self.dict_manager = lifter.load(self.DICTS)
+        self.manager = IterableStore(self.OBJECTS).query(TestModel)
+        self.dict_manager = IterableStore(self.DICTS).query(TestModel)
 
-TestModel = lifter.models.Model('TestModel')
+
+class TestModel(lifter.models.Model):
+    pass
+
 
 class TestQueries(TestBase):
 
     def test_model(self):
-        manager = TestModel.load(self.OBJECTS)
+        manager = IterableStore(self.OBJECTS).query(TestModel)
         self.assertEqual(manager.filter(TestModel.a == 1), self.OBJECTS[:2])
-
-    def test_can_match_object(self):
-        query = TestModel.order == 1
-        manager = TestModel.load([])
-
-        self.assertTrue(manager.match(query, self.OBJECTS[2]))
-        self.assertFalse(manager.match(query, self.OBJECTS[3]))
 
     def test_default_order(self):
         self.assertEqual(list(self.manager.all()), self.OBJECTS)
@@ -160,7 +161,7 @@ class TestQueries(TestBase):
         self.assertIsNotNone(self.dict_manager.filter(TestModel.a == 1).last())
 
     def test_ordering(self):
-        TestModel = lifter.models.Model('TestModel')
+
         self.assertEqual(self.manager.order_by(TestModel.order)[:2], [self.OBJECTS[2], self.OBJECTS[0]])
         self.assertEqual(self.manager.order_by(~TestModel.order)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
 
@@ -168,7 +169,7 @@ class TestQueries(TestBase):
         self.assertEqual(self.dict_manager.order_by(~TestModel.order)[:2], [self.DICTS[3], self.DICTS[1]])
 
     def test_ordering_using_multiple_paths(self):
-        TestModel = lifter.models.Model('TestModel')
+
         p1 = TestModel.a
         p2 = TestModel.order
         self.assertEqual(self.manager.order_by(p1, p2)[:2], [self.OBJECTS[0], self.OBJECTS[1]])
@@ -207,17 +208,17 @@ class TestQueries(TestBase):
         self.assertTrue(self.dict_manager.filter(TestModel.a == 1).exists(from_backend=True))
 
     def test_get_raise_exception_on_multiple_objects_returned(self):
-        with self.assertRaises(lifter.MultipleObjectsReturned):
+        with self.assertRaises(lifter.exceptions.MultipleObjectsReturned):
             self.manager.all().get(TestModel.a == 1)
 
-        with self.assertRaises(lifter.MultipleObjectsReturned):
+        with self.assertRaises(lifter.exceptions.MultipleObjectsReturned):
             self.dict_manager.all().get(TestModel.a == 1)
 
     def test_get_raise_exception_on_does_not_exist(self):
-        with self.assertRaises(lifter.DoesNotExist):
+        with self.assertRaises(lifter.exceptions.DoesNotExist):
             self.manager.all().get(TestModel.a == 123)
 
-        with self.assertRaises(lifter.DoesNotExist):
+        with self.assertRaises(lifter.exceptions.DoesNotExist):
             self.dict_manager.all().get(TestModel.a == 123)
 
     def test_can_filter_using_callable(self):
@@ -328,15 +329,15 @@ class TestLookups(TestBase):
         self.assertEqual(self.manager.filter(TestModel.order <= 3), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_startswith(self):
-        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.startswith('a'))),
+        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.lookups.startswith('a'))),
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_endswith(self):
-        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.endswith('s'))),
+        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.lookups.endswith('s'))),
                         [self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_value_in(self):
-        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.value_in(['alabama', 'arkansas']))),
+        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.lookups.value_in(['alabama', 'arkansas']))),
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_range(self):
@@ -344,19 +345,19 @@ class TestLookups(TestBase):
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_istartswith(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.istartswith('c'))),
+        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.istartswith('c'))),
                         [self.OBJECTS[1], self.OBJECTS[3]])
 
     def test_iendswith(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.iendswith('t'))),
+        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.iendswith('t'))),
                         [self.OBJECTS[0], self.OBJECTS[3]])
 
     def test_contains(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.contains('Lin'))),
+        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.contains('Lin'))),
                         [self.OBJECTS[2]])
 
     def test_icontains(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.icontains('lin'))),
+        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.icontains('lin'))),
                         [self.OBJECTS[2], self.OBJECTS[3]])
 
     def test_field_exists(self):
@@ -371,8 +372,10 @@ class TestLookups(TestBase):
             }
         ]
 
-        Family = lifter.models.Model('Family')
-        manager = Family.load(families)
+        class Family(lifter.models.Model):
+            pass
+
+        manager = IterableStore(families).query(Family)
 
         self.assertEqual(manager.filter(Family.postal_adress.exists()), [families[0]])
         self.assertEqual(manager.filter(~Family.postal_adress.exists()), [families[1]])

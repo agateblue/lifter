@@ -15,9 +15,9 @@ What is lifter?
     :target: https://travis-ci.org/EliotBerriot/lifter
 
 
-Lifter is a lightweight query engine for Python iterables, inspired by Django ORM.
+Lifter is a lightweight query engine, inspired by Django ORM and SQLAlchemy.
 
-If you find if painful to gather data from collections of Python objects or dictionaries, such as API results, lifter is for you!
+Its goal is to provide a unique interface to query any type of data, regardless of the underlying query language or data backend (SQL, REST, Python objects...).
 
 **Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
 Contributions are welcome :)

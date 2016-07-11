@@ -8,12 +8,6 @@ from . import utils
 REPR_OUTPUT_SIZE = 10
 
 
-def filter_values(func, values):
-    """We implement a lazy filter since built-in filter() is not lazy in Python2"""
-    for value in values:
-        if func(value):
-            yield value
-
 class Path(object):
 
     class DoesNotExist(object):
@@ -152,20 +146,10 @@ class QueryNode(BaseQueryNode):
             func, ('test', self.path, func)
         )
 
-    def exists(self):
-        def impl(value):
-            try:
-                v = self.path.get(value)
-                return True
-            except exceptions.MissingAttribute:
-                return False
 
-        return QueryImpl(impl, ('exists', self.path))
 
-    # __contains__, matches, search, any, all, exists probably
-
-def lookup_to_path(lookup, path_class):
-    path = path_class()
+def lookup_to_path(lookup):
+    path = Path()
     for part in lookup.replace('__', '.').split('.'):
         path = getattr(path, part)
     return path
@@ -284,7 +268,7 @@ class QuerySet(object):
         """Convert django-s like lookup to SQLAlchemy ones"""
         query = None
         for lookup, value in kwargs.items():
-            path = lookup_to_path(lookup, path_class=self.model.path_class)
+            path = lookup_to_path(lookup)
 
             if hasattr(value, '__call__'):
                 q = path.test(value)
@@ -353,7 +337,7 @@ class QuerySet(object):
     def arg_to_path(self, arg):
         path = arg
         if isinstance(arg, str):
-            path = lookup_to_path(arg, self.model.path_class)
+            path = lookup_to_path(arg)
         return path
 
     def values(self, *args):
@@ -376,19 +360,19 @@ class QuerySet(object):
         query = self.query.clone(action='values', paths=paths, mode='iterable', flat=kwargs.get('flat'))
         return self.manager.execute(query)
 
-    def _build_aggregate(self, aggregation, function_name=None, key=None):
+    def _get_aggregate_key(self, aggregation, function_name, key=None):
         if key:
             final_key = key
         else:
             func_name = function_name or aggregation.func.__name__ if aggregation.func.__name__ != '<lambda>' else key
             final_key = '{0}__{1}'.format(str(aggregation.path), func_name)
-        values = list((aggregation.path.get(val) for val in self.data))
-        return aggregation.aggregate(values), final_key
+        return final_key
 
     def aggregate(self, *args, **kwargs):
         data = {}  # Isn't lazy
         flat = kwargs.pop('flat', False)
 
+        aggregates = []
         for conf in args:
             function_name = None
             try:
@@ -396,13 +380,18 @@ class QuerySet(object):
                 path, func = conf
             except TypeError:
                 # Django-like aggregate
-                path = lookup_to_path(conf.attr_name, path_class=self.model.path_class)
+                path = lookup_to_path(conf.attr_name)
                 func = conf.aggregate
                 function_name = conf.name
 
             aggregation = Aggregation(path, func)
-            aggregate, key = self._build_aggregate(aggregation, function_name=function_name)
-            data[key] = aggregate
+            aggregates.append(
+                (
+                    self._get_aggregate_key(aggregation, function_name),
+                    aggregation
+                )
+            )
+
         for key, conf in kwargs.items():
             function_name = None
             try:
@@ -410,19 +399,20 @@ class QuerySet(object):
                 path, func = conf
             except TypeError:
                 # Django-like aggregate
-                path = lookup_to_path(conf.attr_name, self.model.path_class)
+                path = lookup_to_path(conf.attr_name)
                 func = conf.aggregate
                 function_name = conf.name
 
             aggregation = Aggregation(path, func)
-            aggregate, key = self._build_aggregate(aggregation, function_name=function_name, key=key)
-            data[key] = aggregate
+            aggregates.append(
+                (
+                    self._get_aggregate_key(aggregation, function_name, key),
+                    aggregation
+                )
+            )
 
-
-        if flat:
-            return list(data.values())  # Isn't lazy
-
-        return data
+        query = self.query.clone(action='aggregate', aggregates=aggregates, flat=flat)
+        return self.manager.execute(query)
 
     def distinct(self):
         new_query = self.query.clone(distinct=True)

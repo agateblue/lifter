@@ -12,7 +12,8 @@ from lifter.backends import filesystem
 from lifter.models import Model
 from lifter.adapters import RegexAdapter
 
-LogEntry = Model('LogEntry')
+class LogEntry(Model):
+    pass
 
 class Adapter(RegexAdapter):
     regex='(?P<level>.*) - (?P<date>.*) - (?P<message>.*)'

@@ -2,41 +2,11 @@ import operator
 
 from . import base
 from .. import query
+from .. import models
 from .. import store
 from .. import exceptions
 from .. import utils
 from .. import managers
-
-
-class PythonPath(query.Path):
-
-    def get(self, data, **kwargs):
-        if not self._getters:
-            # Since this is one of the most called method in lifter, we avoid
-            # any call to other methods here
-            for part in self.path:
-                self._getters.append(utils.attrgetter(part))
-
-        try:
-            for getter in self._getters:
-                data = getter(data)
-        except exceptions.MissingAttribute:
-            if kwargs.get('soft_fail', False):
-                return query.Path.DoesNotExist
-            raise
-        return data
-
-
-class PythonModel(base.BaseModel):
-    __metaclass__ = base.BaseModelMeta
-    path_class = PythonPath
-
-    @classmethod
-    def load(cls, store, **kwargs):
-        try:
-            return store.query(cls, **kwargs)
-        except AttributeError:
-            return IterableStore(store).query(cls, **kwargs)
 
 
 def get_wrapper(query):
@@ -49,11 +19,26 @@ def get_wrapper(query):
         matcher = any
 
     def wrapper(obj):
-        result =  matcher((q(obj) for q in subqueries))
+        result = matcher((q(obj) for q in subqueries))
         if inverted:
             return not result
         return result
     return wrapper
+
+
+def path_to_value(data, path, **kwargs):
+    soft_fail = kwargs.pop('soft_fail', False)
+    getters = [utils.attrgetter(part) for part in path.path]
+
+    try:
+        for getter in getters:
+            data = getter(data)
+    except exceptions.MissingAttribute:
+        if soft_fail:
+            return query.Path.DoesNotExist
+        raise
+    return data
+
 
 class QueryImpl(object):
     def __init__(self, base_query):
@@ -69,9 +54,8 @@ class QueryImpl(object):
             test = self.base_query.test
             args, kwargs = self.base_query.test_args, self.base_query.test_kwargs
             inverted = self.base_query.inverted
-            path_kwargs = self.base_query.path_kwargs
             def leaf_query(obj):
-                value = self.base_query.path.get(obj, **path_kwargs)
+                value = path_to_value(obj, self.base_query.path, **self.base_query.path_kwargs)
                 result = test(value, *args, **kwargs)
                 if inverted:
                     return not result
@@ -155,7 +139,8 @@ class RefinedIterableStore(store.RefinedStore):
                 if ordering.random:
                     iterator = sorted(iterator, key=random_value)
                     continue
-                iterator = sorted(iterator, key=ordering.path.get, reverse=ordering.reverse)
+                l = lambda v: path_to_value(v, ordering.path)
+                iterator = sorted(iterator, key=l, reverse=ordering.reverse)
 
         if query.hints.get('distinct', False):
             iterator = utils.unique_everseen(iterator)
@@ -164,13 +149,27 @@ class RefinedIterableStore(store.RefinedStore):
     def handle_values(self, query):
         data = self.handle_select(query)
         if query.hints['mode'] == 'mapping':
-            getter = lambda val: {str(path):path.get(val) for path in query.hints['paths']}
+            getter = lambda val: {str(path):path_to_value(val, path) for path in query.hints['paths']}
         else:
             if query.hints.get('flat', False):
-                getter = lambda val: query.hints['paths'][0].get(val)
+                getter = lambda val: path_to_value(val, query.hints['paths'][0])
             else:
-                getter = lambda val: tuple(path.get(val) for path in query.hints['paths'])
-        return PythonModel.load(map(getter, data)).all()
+                getter = lambda val: tuple(path_to_value(val, path) for path in query.hints['paths'])
+        values = map(getter, data)
+
+        return IterableStore(values).query(models.Model).all()
+
+    def handle_aggregate(self, query):
+        data = self.handle_select(query)
+        if query.hints.get('flat', False):
+            return [
+                aggregate.aggregate([path_to_value(val, aggregate.path) for val in data])
+                for key, aggregate in query.hints['aggregates']
+            ]
+        return {
+            key: aggregate.aggregate([path_to_value(val, aggregate.path) for val in data])
+            for key, aggregate in query.hints['aggregates']
+        }
 
 
 class IterableStore(store.Store):

@@ -1,12 +1,14 @@
+import six
+
 from .. import managers
+from .. import query
 
 
 class BaseModelMeta(type):
     def __getattr__(cls, key):
-        return getattr(cls.path_class(), key)
+        return getattr(query.Path(), key)
 
-class BaseModel(object):
-    __metaclass__ = BaseModelMeta
+class BaseModel(six.with_metaclass(BaseModelMeta, object)):
 
     @classmethod
     def load(cls, store, **kwargs):
