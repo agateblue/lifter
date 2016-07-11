@@ -34,7 +34,7 @@ Features
 * Queryset API similar to Django_  and SQLAlchemy_
 * Lazy querysets
 * Composable queries
-* Lightweight: absolutely no dependencies
+* Lightweight: very little dependencies
 * Tested and working on Python 2.7 to Python 3.5
 
 .. _Django: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
@@ -82,10 +82,14 @@ To use lifter in your project, you'll only need the following instructions:
 
 .. code-block:: python
 
-    import lifter
+    import lifter.models
+    from lifter.backends.python import IterableStore
 
-    User = lifter.models.Model('User')
-    manager = User.load(users)
+    class User(lifter.models.Model):
+        pass
+
+    store = IterableStore(users)
+    manager = store.query(User)
 
 Getting getting all active 26 years old users:
 

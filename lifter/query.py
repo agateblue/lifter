@@ -26,6 +26,9 @@ class Path(object):
     def __str__(self):
         return '.'.join(self.path)
 
+    def __repr__(self):
+        return '<Path: {0}>'.format(self)
+
     def __eq__(self, other):
         return QueryNode(path=self, test=operator.eq, test_args=[other])
 
