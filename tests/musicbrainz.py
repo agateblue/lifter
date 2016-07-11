@@ -24,10 +24,8 @@ class ReleaseParser(parsers.Parser):
             'date': data.find('mb:date', namespaces=self.namespaces).text,
         }
 
-class ReleaseManager(http.HTTPManager):
-    queryset_class = ReleaseQuerySet
+class ReleaseStore(http.HTTPStore):
     endpoint = 'musicbrainz.org/ws/2/release'
-    parser_class = ReleaseParser
 
     def clean_data(self, data):
         return ET.fromstring(data)[0]
@@ -36,9 +34,13 @@ class ReleaseManager(http.HTTPManager):
         url = self.protocol + '://' + self.endpoint
         request = self.request_factory('GET', url, params={'query': query.hints['querystring']})
         response = self.session.send(request)
-        return self.parse_results(response.content)
+        return self.parse_results(response.content, query)
 
 class Client(object):
     def __init__(self, session=None, protocol='http'):
         self.session = session
-        self.releases = ReleaseManager(model=Release, session=self.session, protocol=protocol)
+        self.release_store = ReleaseStore(protocol=protocol, session=self.session)
+        self.releases = Release.load(
+            store=self.release_store,
+            parser=ReleaseParser(),
+            queryset_class=ReleaseQuerySet)

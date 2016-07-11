@@ -155,16 +155,12 @@ class IterableStore(store.Store):
                 getter = lambda val: tuple(path.get(val) for path in query.hints['paths'])
         return PythonModel.load(map(getter, data)).all()
 
-class AbstractPythonManager(managers.Manager):
 
+class PythonManager(managers.Manager):
 
     def match(self, query, obj):
         compiled_query = QueryImpl(query)
         return compiled_query(obj)
-
-
-
-class PythonManager(AbstractPythonManager):
 
     def __init__(self, *args, **kwargs):
         store = kwargs.get('store')
@@ -172,6 +168,3 @@ class PythonManager(AbstractPythonManager):
             kwargs['store'] = IterableStore(store)
 
         super(PythonManager, self).__init__(*args, **kwargs)
-
-    def get_values(self):
-        return self._values
