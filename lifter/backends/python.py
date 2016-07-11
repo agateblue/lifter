@@ -170,7 +170,6 @@ class RefinedIterableStore(store.RefinedStore):
     def handle_aggregate(self, query):
         data = self.handle_select(query)
         values = self.collect_values(data, query.hints['aggregates'])
-        print(values)
         if query.hints.get('flat', False):
             return [
                 aggregate.aggregate(values[key])
