@@ -1,78 +1,148 @@
-=====
-Usage
-=====
+Query API
+==========
 
-Using lifter consists only of a few steps.
+At the moment, lifter is read-only, meaning no write query can be issued to a store.
 
-First of all, remember to import lifter in your project:
+:py:class:`QuerySet` is the class used for read-related queries.
+
+Paths
+*****
+
+``Paths`` refers to the fields of a model involved in a query. For example, take the following queryset:
 
 .. code-block:: python
 
     import lifter.models
+    
+    class User(lifter.models.Model):
+        pass
 
-Creating a model
+    manager.filter(User.age > 13, User.is_active == True)
+
+In the previous example, two paths are used in the query: ``User.age`` and ``User.is_active``.
+
+Thanks to a little magic, these paths are actually represented as plain python objects:
+
+.. code-block:: python
+
+    User.age
+    >>> <Path: age>
+
+Paths can actually be nested. If you have the following data source:
+
+.. code-block:: python
+
+    users = [
+        {
+            'id': 1,
+            'name': 'Jeff Winger',
+            'company': {
+                'id': 3,
+                'name': 'Greendale',
+            }
+        }
+    ]
+
+You can totally create paths such as ``User.company.id`` or ``User.company.name``.
+
+Query nodes
+************
+
+Paths are used to create query nodes. A :py:class:`QueryNode` is a Python object, used to represent a condition:
+
+.. code-block:: python
+
+    path = User.age
+    qn = path < 30
+
+Of course, in real life, you'll use the shorter (and also more readable notation):
+
+.. code-block:: python
+
+    User.age < 30
+    >>> <QueryNode age, <built-in function lt>, [30], {}>
+
+In the previous example, we have created a query node representing the condition ``age < 30``.
+We can now use this node to fetch data:
+
+.. code-block:: python
+
+    qn = User.age < 30
+    manager.all().filter(qn)
+    >>> Returns all user matching the condition
+
+Combining nodes
 ----------------
 
-This model will represent the data you are querying:
+It is possible to combine nodes together using python bitwise operators to build more complex queries:
 
 .. code-block:: python
 
-    User = lifter.models.Model('User')
-    # Or Dog, or Cat, or anything you want
+    qn = (User.age < 30) & (User.is_active == True)
+    >>> a node matching User.age < 30 AND User.is_active == True
 
-Loading data into a manager
----------------------------
+    qn = (User.age < 30) | (User.is_active == True)
+    >>> a node matching User.age < 30 OR User.is_active == True
 
-Managers are basically intermediate objects used to generate querysets.
+    # use ~ to invert a query node
+    qn = ~(User.age < 30)
 
-.. code-block:: python
+Queries
+********
 
-    manager = User.load(my_user_list)
-
-Making queries
---------------
-
-Once you have a manager set up, you can run an arbitrary number of queries on its data:
+Queries are higher-level objects that describe an action to run on the data store:
 
 .. code-block:: python
 
-    # Simple filters
-    young_users = manager.filter(User.age < 30)
-    old_users = manager.filter(User.age > 60)
+    import lifter.query
 
-    # Chained filters / excludes
-    young_and_inactive_users = young_users.exclude(User.is_active == True)
+    qn = (User.age < 30) & (User.is_active == False)
+    query = lifter.query.Query(action='select', filters=qn)
 
-    young_and_inactive_users.count()
-    # >>> 45
 
-    # Getting a single user
-    kurt = manager.filter(User.email == 'kurt@cobain.com')
+QuerySets
+**********
 
-Queryset API
-------------
+Don't worry, you won't have to instanciate all of these objects by hand to use lifter.
 
-Methods such as :py:func:`get`, :py:func:`filter` or :py:func:`exclude`, expect :py:class:`Query` objects as arguments,
-and return a :py:class:`QuerySet` instance.
+QuerySets are here to provide the high-level API for interacting with data stores.
 
-A :py:class:`Query` is basically a wrapper around a :py:class:`Path` (the attribute you are querying against),
-and a test function:
+Once you have a manager instance, issuing query is done easily with querysets:
 
 .. code-block:: python
 
-    # A path referring to the age attribute
-    path = User.age
+    import lifter.models
+    from lifter.backends.python import IterableStore
 
-    # A query that will check the age attribute is greater than 36
-    query = path > 36
+    class User(lifter.models.Model):
+        pass
 
-    # You can use the query to match a single object if you want
-    # Will return True if kurt.age > 36
-    query.match(kurt)
+    data = [
+        {
+            'age': 27,
+            'is_active': False,
+            'email': 'kurt@cobain.music',
+        },
+        {
+            'age': 687,
+            'is_active': True,
+            'email': 'legolas@deepforest.org',
+        },
+        {
+            'age': 34,
+            'is_active': False,
+            'email': 'golgoth@lahorde.org',
+        }
+    ]
 
+    store = IterableStore(data)
+    manager = store.query(User)
+
+    # Here you pass query nodes directly to the queryset to obtain results from the store
+    manager.filter(User.age < 30)
 
 QuerySet methods
-****************
+----------------
 
 .. py:method:: filter(*explicit_queries, **keyword_queries)
 
@@ -93,10 +163,15 @@ QuerySet methods
 
     The previous example will return only objects that match *both* queries.
 
+    This is equivalent of writing:
+
+    .. code-block:: python
+
+        manager.filter((User.age >= 42) & (User.age <= 56))
 
 .. py:method:: exclude(*explicit_queries, **keyword_queries)
 
-    This method is the exact opposite of  :py:func:`filter`. It will return
+    This method is the exact opposite of :py:func:`filter`. It will return
     objects that do *not* match the provided queries:
 
     .. code-block:: python
@@ -106,6 +181,14 @@ QuerySet methods
 
         # Exclude only inactive users that are 42 years-old
         manager.exclude(User.is_active == False, User.age == 42)
+
+    Providing multiple queries to this method will merge all of them using AND operator:
+
+    This is equivalent of writing:
+
+    .. code-block:: python
+
+        manager.exclude((User.age >= 42) & (User.age <= 56))
 
 .. py:method:: get(*explicit_queries, **keyword_queries)
 
@@ -118,7 +201,7 @@ QuerySet methods
     Get will raise :py:class:`lifter.exceptions.DoesNotExist` if no object is found, and
     :py:class:`lifter.exceptions.MultipleObjectsReturned` if multiple objects are found:
 
-    .. code-block::
+    .. code-block:: python
 
         import lifter.exceptions
 
@@ -288,7 +371,7 @@ QuerySet methods
         [44.2, 12]
 
 Chaining querysets
-******************
+-------------------
 
 Some of the previously described methods allow chaining
 You can chain querysets at will using :py:func:`filter` and/or :py:func:`exclude`:
@@ -304,7 +387,7 @@ The previous example tranlates to:
 3. Then, from the previous queryset, leave only users with no beard
 
 Querysets are lazy
-******************
+--------------------
 
 No matter how much time you chain :py:func:`filter` and/or :py:func:`exclude` calls,
 the final query will only be actually applied when you try to access the queryset data:

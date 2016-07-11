@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<metadata created="2016-03-29T12:10:24.055Z" xmlns="http://musicbrainz.org/ns/mmd-2.0#" xmlns:ext="http://musicbrainz.org/ns/ext#-2.0">
+    <release-list count="38" offset="0">
+        <release id="67b0fc4e-65ba-41ef-8d9d-76c30ddbbe3f" ext:score="100">
+            <title>Carpenter</title>
+            <status>Official</status>
+            <packaging>None</packaging>
+            <text-representation>
+                <language>eng</language>
+                <script>
+                    Latn
+                </script>
+            </text-representation>
+            <artist-credit>
+                <name-credit>
+                    <artist id="89ad4ac3-39f7-470e-963a-56509c546377">
+                        <name>Various Artists</name>
+                        <sort-name>Various Artists</sort-name>
+                        <disambiguation>add compilations to this artist</disambiguation>
+                    </artist>
+                </name-credit>
+            </artist-credit>
+            <release-group id="d2ceb4c7-1df8-42b7-8dbf-d62438bec50a" type="Compilation">
+                <primary-type>Album</primary-type>
+                <secondary-type-list>
+                    <secondary-type>Compilation</secondary-type>
+                </secondary-type-list>
+            </release-group>
+            <date>2015-04-07</date>
+            <country>XW</country>
+            <release-event-list>
+                <release-event>
+                    <date>2015-04-07</date>
+                    <area id="525d4e18-3d00-31b9-a58b-a146a916de8f">
+                        <name>[Worldwide]</name>
+                        <sort-name>[Worldwide]</sort-name>
+                        <iso-3166-1-code-list>
+                            <iso-3166-1-code>XW</iso-3166-1-code>
+                        </iso-3166-1-code-list>
+                    </area>
+                </release-event>
+            </release-event-list>
+            <barcode></barcode>
+            <label-info-list>
+                <label-info>
+                    <catalog-number>RP019</catalog-number>
+                    <label id="0c00978a-1a94-4efa-887c-6fce70ed4dbe">
+                        <name>Retro Promenade</name>
+                    </label>
+                </label-info>
+            </label-info-list>
+            <medium-list count="1">
+                <track-count>20</track-count>
+                <medium>
+                    <format>Digital Media</format><disc-list count="0"/><track-list count="20"/></medium>
+            </medium-list>
+        </release>
+        <release id="a277c292-bf4c-3e39-a703-1085d2aec63e" ext:score="62">
+            <title>Giorgio Carpenter</title>
+            <status>Official</status>
+            <text-representation>
+                <language>eng</language>
+                <script>
+                    Latn
+                </script>
+            </text-representation>
+            <artist-credit>
+                <name-credit>
+                    <artist id="3a25cf2a-59f1-45c2-8418-bfa3d6185f09">
+                        <name>Cage &amp; Aviary</name>
+                        <sort-name>Cage &amp; Aviary</sort-name>
+                    </artist>
+                </name-credit>
+            </artist-credit>
+            <release-group id="416c2b43-3fab-4bb2-bdb9-6bcd28bcb3a7" type="Single">
+                <primary-type>Single</primary-type>
+            </release-group>
+            <date>2007-07</date>
+            <country>GB</country>
+            <release-event-list>
+                <release-event>
+                    <date>2007-07</date>
+                    <area id="8a754a16-0027-3a29-b6d7-2b40ea0481ed">
+                        <name>United Kingdom</name>
+                        <sort-name>United Kingdom</sort-name>
+                        <iso-3166-1-code-list>
+                            <iso-3166-1-code>GB</iso-3166-1-code>
+                        </iso-3166-1-code-list>
+                    </area>
+                </release-event>
+            </release-event-list>
+            <label-info-list>
+                <label-info>
+                    <catalog-number>EARS 3001</catalog-number>
+                    <label id="e3224651-0875-468e-ae03-00a932c77eef">
+                        <name>Dissident</name>
+                    </label>
+                </label-info>
+                <label-info>
+                    <catalog-number>EARS 3001</catalog-number>
+                    <label id="99cc0b06-ee09-44ec-992c-d09788b46fdb">
+                        <name>The Walls Have Ears</name>
+                    </label>
+                </label-info>
+            </label-info-list>
+            <medium-list count="1">
+                <track-count>1</track-count>
+                <medium>
+                    <format>12" Vinyl</format><disc-list count="0"/><track-list count="1"/></medium>
+            </medium-list>
+        </release>
+        <release id="5dda0a81-825d-49fe-a36b-cd3add421578" ext:score="62">
+            <title>The Carpenter</title>
+            <status>Official</status>
+            <packaging>None</packaging>
+            <text-representation>
+                <language>eng</language>
+                <script>
+                    Latn
+                </script>
+            </text-representation>
+            <artist-credit>
+                <name-credit>
+                    <artist id="0a176d0a-ef46-4e7f-b018-9f4d65614668">
+                        <name>The Avett Brothers</name>
+                        <sort-name>Avett Brothers, The</sort-name>
+                    </artist>
+                </name-credit>
+            </artist-credit>
+            <release-group id="5f359791-cff7-4e4f-8805-0c1154ffda96" type="Album">
+                <primary-type>Album</primary-type>
+            </release-group>
+            <date>2012-09-11</date>
+            <country>US</country>
+            <release-event-list>
+                <release-event>
+                    <date>2012-09-11</date>
+                    <area id="489ce91b-6658-3307-9877-795b68554c98">
+                        <name>United States</name>
+                        <sort-name>United States</sort-name>
+                        <iso-3166-1-code-list>
+                            <iso-3166-1-code>US</iso-3166-1-code>
+                        </iso-3166-1-code-list>
+                    </area>
+                </release-event>
+            </release-event-list>
+            <medium-list count="1">
+                <track-count>12</track-count>
+                <medium>
+                    <format>Digital Media</format><disc-list count="0"/><track-list count="12"/></medium>
+            </medium-list>
+        </release>
+        <release id="2adb573d-574d-451f-98f3-68eef4a47b6e" ext:score="62">
+            <title>The Carpenter</title>
+            <status>Official</status>
+            <packaging>Cardboard/Paper Sleeve</packaging>
+            <text-representation>
+                <language>eng</language>
+                <script>
+                    Latn
+                </script>
+            </text-representation>
+            <artist-credit>
+                <name-credit>
+                    <artist id="0a176d0a-ef46-4e7f-b018-9f4d65614668">
+                        <name>The Avett Brothers</name>
+                        <sort-name>Avett Brothers, The</sort-name>
+                    </artist>
+                </name-credit>
+            </artist-credit>
+            <release-group id="5f359791-cff7-4e4f-8805-0c1154ffda96" type="Album">
+                <primary-type>Album</primary-type>
+            </release-group>
+            <date>2012-09-11</date>
+            <country>US</country>
+            <release-event-list>
+                <release-event>
+                    <date>2012-09-11</date>
+                    <area id="489ce91b-6658-3307-9877-795b68554c98">
+                        <name>United States</name>
+                        <sort-name>United States</sort-name>
+                        <iso-3166-1-code-list>
+                            <iso-3166-1-code>US</iso-3166-1-code>
+                        </iso-3166-1-code-list>
+                    </area>
+                </release-event>
+            </release-event-list>
+            <barcode>602537127863</barcode>
+            <asin>B008OM7A4K</asin>
+            <label-info-list>
+                <label-info>
+                    <catalog-number>B0011328-02</catalog-number>
+                    <label id="f5be9cfe-e1af-405c-a074-caeaed6797c0">
+                        <name>American Recordings</name>
+                    </label>
+                </label-info>
+            </label-info-list>
+            <medium-list count="1">
+                <track-count>12</track-count>
+                <medium>
+                    <format>CD</format><disc-list count="1"/><track-list count="12"/></medium>
+            </medium-list>
+        </release>
+    </release-list>
+</metadata>

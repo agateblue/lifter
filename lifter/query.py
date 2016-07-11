@@ -8,12 +8,6 @@ from . import utils
 REPR_OUTPUT_SIZE = 10
 
 
-def filter_values(func, values):
-    """We implement a lazy filter since built-in filter() is not lazy in Python2"""
-    for value in values:
-        if func(value):
-            yield value
-
 class Path(object):
 
     class DoesNotExist(object):
@@ -32,33 +26,36 @@ class Path(object):
     def __str__(self):
         return '.'.join(self.path)
 
+    def __repr__(self):
+        return '<Path: {0}>'.format(self)
+
     def __eq__(self, other):
-        return Query(path=self, test=operator.eq, test_args=[other])
+        return QueryNode(path=self, test=operator.eq, test_args=[other])
 
     def __ne__(self, other):
-        return Query(path=self, test=operator.ne, test_args=[other])
+        return QueryNode(path=self, test=operator.ne, test_args=[other])
 
     def __gt__(self, other):
-        return Query(path=self, test=operator.gt, test_args=[other])
+        return QueryNode(path=self, test=operator.gt, test_args=[other])
 
     def __ge__(self, other):
-        return Query(path=self, test=operator.ge, test_args=[other])
+        return QueryNode(path=self, test=operator.ge, test_args=[other])
 
     def __lt__(self, other):
-        return Query(path=self, test=operator.lt, test_args=[other])
+        return QueryNode(path=self, test=operator.lt, test_args=[other])
 
     def __le__(self, other):
-        return Query(path=self, test=operator.le, test_args=[other])
+        return QueryNode(path=self, test=operator.le, test_args=[other])
 
     def __invert__(self):
         """For reverse order_by"""
         return Ordering(self, reverse=True)
 
     def test(self, func, *args, **kwargs):
-        return Query(path=self, test=func, test_args=args, test_kwargs=kwargs)
+        return QueryNode(path=self, test=func, test_args=args, test_kwargs=kwargs)
 
     def exists(self):
-        return Query(path=self, test=check_existence, path_kwargs={'soft_fail': True})
+        return QueryNode(path=self, test=check_existence, path_kwargs={'soft_fail': True})
 
 def check_existence(v):
     return v != Path.DoesNotExist
@@ -87,22 +84,22 @@ class Aggregation(object):
         return self.func(data)
 
 
-class BaseQuery(object):
+class BaseQueryNode(object):
     def __init__(self, *args, **kwargs):
         self.inverted = kwargs.pop('inverted', False)
 
     def __and__(self, other):
-        return QueryWrapper('AND', self, other)
+        return QueryNodeWrapper('AND', self, other)
 
     def __or__(self, other):
-        return QueryWrapper('OR', self, other)
+        return QueryNodeWrapper('OR', self, other)
 
     def __invert__(self):
         return self.clone(inverted=not self.inverted)
 
-class QueryWrapper(BaseQuery):
+class QueryNodeWrapper(BaseQueryNode):
     def __init__(self, operator, *args, **kwargs):
-        super(QueryWrapper, self).__init__(**kwargs)
+        super(QueryNodeWrapper, self).__init__(**kwargs)
         self.operator = operator
         self.subqueries = args
 
@@ -111,7 +108,7 @@ class QueryWrapper(BaseQuery):
             inverted_repr = 'NOT '
         else:
             inverted_repr = ''
-        return '<QueryWrapper {0}{1} ({2})>'.format(inverted_repr, self.operator, self.operator.join([repr(self.subqueries)]))
+        return '<QueryNodeWrapper {0}{1} ({2})>'.format(inverted_repr, self.operator, self.operator.join([repr(self.subqueries)]))
 
     def clone(self, **kwargs):
         kwargs.setdefault('inverted', self.inverted)
@@ -121,11 +118,11 @@ class QueryWrapper(BaseQuery):
             **kwargs)
         return new_query
 
-class Query(BaseQuery):
+class QueryNode(BaseQueryNode):
     """An abstract way to represent query, that will be compiled to an actual query by the manager"""
     def __init__(self, path, test, test_args=[], test_kwargs={}, path_kwargs={}, **kwargs):
         self.path_kwargs = path_kwargs
-        super(Query, self).__init__(**kwargs)
+        super(QueryNode, self).__init__(**kwargs)
         self.path = path
         self.test = test
         self.test_args = test_args
@@ -136,7 +133,7 @@ class Query(BaseQuery):
             test_repr = 'NOT {0}'.format(self.test)
         else:
             test_repr = repr(self.test)
-        return '<Query {0}, {1}, {2}, {3}>'.format(self.path, test_repr, self.test_args, self.test_kwargs)
+        return '<QueryNode {0}, {1}, {2}, {3}>'.format(self.path, test_repr, self.test_args, self.test_kwargs)
 
     def clone(self, **kwargs):
         kwargs.setdefault('path', self.path)
@@ -152,23 +149,35 @@ class Query(BaseQuery):
             func, ('test', self.path, func)
         )
 
-    def exists(self):
-        def impl(value):
-            try:
-                v = self.path.get(value)
-                return True
-            except exceptions.MissingAttribute:
-                return False
 
-        return QueryImpl(impl, ('exists', self.path))
 
-    # __contains__, matches, search, any, all, exists probably
-
-def lookup_to_path(lookup, path_class):
-    path = path_class()
+def lookup_to_path(lookup):
+    path = Path()
     for part in lookup.replace('__', '.').split('.'):
         path = getattr(path, part)
     return path
+
+
+class Query(object):
+    """Will gather all query related data (queried field, ordering, distinct, etc.)
+    and be passed to the manager"""
+    def __init__(self, action, filters=None, orderings=[], **hints):
+        self.filters = filters
+        self.orderings = orderings
+        self.action = action
+        self.hints = hints
+
+    def clone(self, **kwargs):
+        base_kwargs = {
+            'orderings': self.orderings,
+            'action': self.action,
+        }
+        if self.filters:
+            base_kwargs['filters'] = self.filters.clone()
+        base_kwargs.update(**self.hints)
+        base_kwargs.update(**kwargs)
+
+        return self.__class__(**base_kwargs)
 
 class QuerySet(object):
     def __init__(self, manager, model, query=None, orderings=None, distinct=False):
@@ -178,7 +187,8 @@ class QuerySet(object):
         self._data = []
 
         self.orderings = orderings
-        self.query = query
+        self.query = query or Query(action='select')
+
         self.distinct_results = distinct
 
     def __repr__(self):
@@ -200,14 +210,8 @@ class QuerySet(object):
         self._populated = True
         return self._data
 
-    def get_whole_query_kwargs(self):
-        return {
-            'orderings': self.orderings,
-            'query': self.query,
-            'distinct': self.distinct_results,
-        }
     def iterator(self):
-        return self.manager.execute_query(**self.get_whole_query_kwargs())
+        return self.manager.execute(self.query)
 
     def __eq__(self, other):
         return self.data == other
@@ -225,7 +229,7 @@ class QuerySet(object):
     def _clone(self, query=None, orderings=None, **kwargs):
         orderings = orderings or self.orderings
         distinct = kwargs.get('distinct', self.distinct_results)
-        return self.__class__(self.manager, model=self.model, query=query, orderings=orderings, distinct=distinct)
+        return self.__class__(self.manager, model=self.model, query=query)
 
     def all(self):
         return self._clone()
@@ -242,7 +246,7 @@ class QuerySet(object):
         except IndexError:
             return None
 
-    def build_query(self, *args, **kwargs):
+    def build_filter(self, *args, **kwargs):
         if not args and not kwargs:
             raise ValueError('You need to provide at least a query or some keyword arguments')
 
@@ -253,7 +257,7 @@ class QuerySet(object):
                 continue
             final_arg_query = final_arg_query & arg
 
-        kwargs_query = self.build_query_from_kwargs(**kwargs)
+        kwargs_query = self.build_filter_from_kwargs(**kwargs)
         if kwargs_query and final_arg_query:
             final_query = final_arg_query & kwargs_query
         elif kwargs_query:
@@ -263,11 +267,11 @@ class QuerySet(object):
 
         return final_query
 
-    def build_query_from_kwargs(self, **kwargs):
+    def build_filter_from_kwargs(self, **kwargs):
         """Convert django-s like lookup to SQLAlchemy ones"""
         query = None
         for lookup, value in kwargs.items():
-            path = lookup_to_path(lookup, path_class=self.model.path_class)
+            path = lookup_to_path(lookup)
 
             if hasattr(value, '__call__'):
                 q = path.test(value)
@@ -280,20 +284,25 @@ class QuerySet(object):
                 query = q
         return query
 
-    def _combine_query(self, query):
-        if self.query:
-            return query & self.query
+    def _combine_query_filters(self, query):
+        if self.query.filters:
+            return query & self.query.filters
         return query
 
     def filter(self, *args, **kwargs):
-        final_query = self.build_query(*args, **kwargs)
-        return self._clone(query=self._combine_query(final_query))
+        final_filter = self.build_filter(*args, **kwargs)
+        query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
+        return self._clone(query=query)
 
     def exclude(self, *args, **kwargs):
-        final_query = ~self.build_query(*args, **kwargs)
-        return self._clone(query=self._combine_query(final_query))
+        final_filter = ~self.build_filter(*args, **kwargs)
+        query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
+        return self._clone(query=query)
 
-    def count(self):
+    def count(self, from_backend=False):
+        if from_backend:
+            new_query = self.query.clone(action='count')
+            return self.manager.execute(new_query)
         return len(self.data)
 
     def _parse_ordering(self, *paths):
@@ -320,16 +329,18 @@ class QuerySet(object):
 
     def get(self, *args, **kwargs):
         qs = self.filter(*args, **kwargs)
-        return qs.manager.get(**qs.get_whole_query_kwargs())
+        new_query = qs.query.clone(action='select', force_single=True)
+        return qs.manager.execute(new_query)
 
     def order_by(self, *orderings):
         parsed_orderings = self._parse_ordering(*orderings)
-        return self._clone(orderings=parsed_orderings)
+        new_query = self.query.clone(orderings=parsed_orderings)
+        return self._clone(query=new_query)
 
     def arg_to_path(self, arg):
         path = arg
         if isinstance(arg, str):
-            path = lookup_to_path(arg, self.model.path_class)
+            path = lookup_to_path(arg)
         return path
 
     def values(self, *args):
@@ -337,9 +348,8 @@ class QuerySet(object):
             raise ValueError('Empty values')
 
         paths = [self.arg_to_path(arg) for arg in args]
-        manager_kwargs = self.get_whole_query_kwargs()
-
-        return self.manager.values(paths, **manager_kwargs)
+        query = self.query.clone(action='values', paths=paths, mode='mapping')
+        return self.manager.execute(query)
 
     def values_list(self, *args, **kwargs):
         if not args:
@@ -350,23 +360,22 @@ class QuerySet(object):
         if kwargs.get('flat', False) and len(paths) > 1:
             raise ValueError('You cannot set flat to True if you want to return multiple values')
 
-        manager_kwargs = self.get_whole_query_kwargs()
-        manager_kwargs['flat'] = kwargs.get('flat', False)
-        return self.manager.values_list(paths, **manager_kwargs)
+        query = self.query.clone(action='values', paths=paths, mode='iterable', flat=kwargs.get('flat'))
+        return self.manager.execute(query)
 
-    def _build_aggregate(self, aggregation, function_name=None, key=None):
+    def _get_aggregate_key(self, aggregation, function_name, key=None):
         if key:
             final_key = key
         else:
             func_name = function_name or aggregation.func.__name__ if aggregation.func.__name__ != '<lambda>' else key
             final_key = '{0}__{1}'.format(str(aggregation.path), func_name)
-        values = list((aggregation.path.get(val) for val in self.data))
-        return aggregation.aggregate(values), final_key
+        return final_key
 
     def aggregate(self, *args, **kwargs):
         data = {}  # Isn't lazy
         flat = kwargs.pop('flat', False)
 
+        aggregates = []
         for conf in args:
             function_name = None
             try:
@@ -374,13 +383,18 @@ class QuerySet(object):
                 path, func = conf
             except TypeError:
                 # Django-like aggregate
-                path = lookup_to_path(conf.attr_name, path_class=self.model.path_class)
+                path = lookup_to_path(conf.attr_name)
                 func = conf.aggregate
                 function_name = conf.name
 
             aggregation = Aggregation(path, func)
-            aggregate, key = self._build_aggregate(aggregation, function_name=function_name)
-            data[key] = aggregate
+            aggregates.append(
+                (
+                    self._get_aggregate_key(aggregation, function_name),
+                    aggregation
+                )
+            )
+
         for key, conf in kwargs.items():
             function_name = None
             try:
@@ -388,22 +402,27 @@ class QuerySet(object):
                 path, func = conf
             except TypeError:
                 # Django-like aggregate
-                path = lookup_to_path(conf.attr_name, self.model.path_class)
+                path = lookup_to_path(conf.attr_name)
                 func = conf.aggregate
                 function_name = conf.name
 
             aggregation = Aggregation(path, func)
-            aggregate, key = self._build_aggregate(aggregation, function_name=function_name, key=key)
-            data[key] = aggregate
+            aggregates.append(
+                (
+                    self._get_aggregate_key(aggregation, function_name, key),
+                    aggregation
+                )
+            )
 
-
-        if flat:
-            return list(data.values())  # Isn't lazy
-
-        return data
+        query = self.query.clone(action='aggregate', aggregates=aggregates, flat=flat)
+        return self.manager.execute(query)
 
     def distinct(self):
-        return self._clone(distinct=True)
+        new_query = self.query.clone(distinct=True)
+        return self._clone(query=new_query)
 
-    def exists(self):
+    def exists(self, from_backend=False):
+        if from_backend:
+            new_query = self.query.clone(action='exists')
+            return self.manager.execute(new_query)
         return len(self) > 0
