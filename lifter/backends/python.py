@@ -31,7 +31,7 @@ class PythonModel(base.BaseModel):
 
     @classmethod
     def load(cls, values):
-        return PythonManager(values=values, model=cls)
+        return PythonManager(store=values, model=cls)
 
 def get_wrapper(query):
     inverted = query.inverted
@@ -78,10 +78,6 @@ class QueryImpl(object):
 
 class PythonManager(managers.Manager):
 
-    def __init__(self, *args, **kwargs):
-        self._values = kwargs.pop('values')
-        super(PythonManager, self).__init__(*args, **kwargs)
-
     def get(self, query, orderings, **kwargs):
         iterator = self.execute_query(query, orderings=None)
         first_match = None
@@ -100,10 +96,10 @@ class PythonManager(managers.Manager):
 
     def _raw_data_iterator(self, compiled_query):
         if not compiled_query:
-            for obj in self._values:
+            for obj in self.store:
                 yield obj
         else:
-            for obj in self._values:
+            for obj in self.store:
                 if compiled_query(obj):
                     yield obj
         # return filter(self.query, self._iter_data)

@@ -20,4 +20,5 @@ from .aggregates import *
 
 def load(values, *args, **kwargs):
     from .backends.python import PythonModel, PythonManager
-    return PythonManager(values=values, model=PythonModel, *args, **kwargs)
+    m = PythonManager(store=values, model=PythonModel, *args, **kwargs)
+    return m

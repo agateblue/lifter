@@ -2,9 +2,10 @@
 class Manager(object):
     """Used to retrieve / order / filter preferences pretty much as django's ORM managers"""
 
-    def __init__(self, model, queryset_class=None, **kwargs):
+    def __init__(self, store, model, queryset_class=None, **kwargs):
 
         from . import query
+        self.store = store
         self.model = model
         self.queryset_class = queryset_class or query.QuerySet
 
@@ -16,7 +17,7 @@ class Manager(object):
 
     def values_list(self, *args, **kwargs):
         raise NotImplementedError()
-    
+
     def values(self, *args, **kwargs):
         raise NotImplementedError()
 
