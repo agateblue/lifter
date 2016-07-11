@@ -384,6 +384,14 @@ def mean(values):
     return float(sum(values)) / len(values)
 
 class TestAggregation(TestBase):
+    def test_multiple_aggregates_at_once(self):
+        expected = {
+            'a__sum': 6,
+            'a__avg': 1.5,
+        }
+        aggregates = (lifter.aggregates.Sum('a'), lifter.aggregates.Avg('a'))
+        self.assertEqual(self.manager.aggregate(*aggregates), expected)
+        
     def test_sum(self):
         self.assertEqual(self.manager.aggregate((TestModel.a, sum)), {'a__sum': 6})
         self.assertEqual(self.manager.aggregate(total=(TestModel.a, sum)), {'total': 6})

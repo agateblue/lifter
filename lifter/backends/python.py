@@ -159,15 +159,25 @@ class RefinedIterableStore(store.RefinedStore):
 
         return IterableStore(values).query(models.Model).all()
 
+    def collect_values(self, data, aggregates):
+        r = {}
+        for row in data:
+            for key, aggregate in aggregates:
+                l = r.setdefault(key, [])
+                l.append(path_to_value(row, aggregate.path))
+        return r
+
     def handle_aggregate(self, query):
         data = self.handle_select(query)
+        values = self.collect_values(data, query.hints['aggregates'])
+        print(values)
         if query.hints.get('flat', False):
             return [
-                aggregate.aggregate([path_to_value(val, aggregate.path) for val in data])
+                aggregate.aggregate(values[key])
                 for key, aggregate in query.hints['aggregates']
             ]
         return {
-            key: aggregate.aggregate([path_to_value(val, aggregate.path) for val in data])
+            key: aggregate.aggregate(values[key])
             for key, aggregate in query.hints['aggregates']
         }
 
