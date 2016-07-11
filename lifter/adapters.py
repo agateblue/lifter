@@ -1,7 +1,7 @@
 import re
 
 
-class Parser(object):
+class Adapter(object):
     def parse(self, data):
         raw_data = self.get_raw_data(data)
         cleaned_data = self.full_clean(raw_data)
@@ -23,7 +23,7 @@ class Parser(object):
                 cleaned_data[key] = value
         return cleaned_data
 
-class RegexParser(Parser):
+class RegexAdapter(Adapter):
     def __init__(self, regex=None):
         self.regex = regex or self.regex
         self.compiled_regex = re.compile(self.regex)

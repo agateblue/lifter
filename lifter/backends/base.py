@@ -10,7 +10,7 @@ class BaseModel(object):
 
     @classmethod
     def load(cls, store, **kwargs):
-        return managers.Manager(store=store, model=cls, **kwargs)
+        return store.query(cls, **kwargs)
 
     def __init__(self, **kwargs):
         for field_name, value in kwargs.items():

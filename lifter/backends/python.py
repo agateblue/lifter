@@ -26,13 +26,18 @@ class PythonPath(query.Path):
             raise
         return data
 
+
 class PythonModel(base.BaseModel):
     __metaclass__ = base.BaseModelMeta
     path_class = PythonPath
 
     @classmethod
-    def load(cls, iterable, **kwargs):
-        return PythonManager(store=iterable, model=cls, **kwargs)
+    def load(cls, store, **kwargs):
+        try:
+            return store.query(cls, **kwargs)
+        except AttributeError:
+            return IterableStore(store).query(cls, **kwargs)
+
 
 def get_wrapper(query):
     inverted = query.inverted
@@ -77,13 +82,25 @@ class QueryImpl(object):
         return self.test(obj)
 
 
-class IterableStore(store.Store):
+class PythonManager(managers.Manager):
 
-    def __init__(self, values):
-        self.values = values
+    def match(self, query, obj):
+        compiled_query = QueryImpl(query)
+        return compiled_query(obj)
+
+    def __init__(self, *args, **kwargs):
+        store = kwargs.get('store')
+        if not hasattr(store, 'get_all_values'):
+            kwargs['store'] = IterableStore(store)
+
+        super(PythonManager, self).__init__(*args, **kwargs)
+
+class RefinedIterableStore(store.RefinedStore):
+
+    manager_class = PythonManager
 
     def get_all_values(self, query):
-        return self.values
+        return self.parent.values
 
     def get_values(self, query):
         compiled_filters = None
@@ -156,15 +173,9 @@ class IterableStore(store.Store):
         return PythonModel.load(map(getter, data)).all()
 
 
-class PythonManager(managers.Manager):
+class IterableStore(store.Store):
 
-    def match(self, query, obj):
-        compiled_query = QueryImpl(query)
-        return compiled_query(obj)
+    refined_class = RefinedIterableStore
 
-    def __init__(self, *args, **kwargs):
-        store = kwargs.get('store')
-        if not hasattr(store, 'get_all_values'):
-            kwargs['store'] = IterableStore(store)
-
-        super(PythonManager, self).__init__(*args, **kwargs)
+    def __init__(self, values):
+        self.values = values

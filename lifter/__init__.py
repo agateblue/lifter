@@ -19,5 +19,5 @@ from .aggregates import *
 # from . import models
 
 def load(values, *args, **kwargs):
-    from .backends.python import PythonModel, PythonManager
-    return PythonManager(store=values, model=PythonModel, *args, **kwargs)
+    from .backends.python import PythonModel, PythonManager, IterableStore
+    return PythonModel.load(values, **kwargs)

@@ -2,7 +2,6 @@
 class Manager(object):
     """Used to retrieve / order / filter preferences pretty much as django's ORM managers"""
     queryset_class = None
-    parser_class = None
 
     def __init__(self, store, model, queryset_class=None, **kwargs):
 
@@ -10,7 +9,7 @@ class Manager(object):
         self.model = model
         self.store = store
         self.queryset_class = queryset_class or self.queryset_class or query.QuerySet
-        self.parser = kwargs.pop('parser', None)
+        self.adapter = kwargs.pop('adapter', None)
 
     def get_store(self):
         return self.store
@@ -22,11 +21,10 @@ class Manager(object):
         return self.get_queryset().all()
 
     def execute(self, query):
-        query.hints['model'] = self.model
-        query.hints['parser'] = self.parser
-        
+        store = self.get_store()
+
         try:
-            handler = getattr(self.get_store(), 'handle_{0}'.format(query.action))
+            handler = getattr(store, 'handle_{0}'.format(query.action))
         except AttributeError:
             raise ValueError('Unsupported {0} action'.format(query.action))
 

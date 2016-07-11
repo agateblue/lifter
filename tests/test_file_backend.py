@@ -10,11 +10,11 @@ DATA_PATH = os.path.join(BASE_DIR, 'data', 'log.sample')
 
 from lifter.backends import filesystem
 from lifter.models import Model
-from lifter.parsers import RegexParser
+from lifter.adapters import RegexAdapter
 
 LogEntry = Model('LogEntry')
 
-class Parser(RegexParser):
+class Adapter(RegexAdapter):
     regex='(?P<level>.*) - (?P<date>.*) - (?P<message>.*)'
 
     def clean_date(self, value):
@@ -25,10 +25,10 @@ class Parser(RegexParser):
 class TestFileBackend(unittest.TestCase):
     def setUp(self):
         self.store = filesystem.FileStore(path=DATA_PATH)
-        self.manager = LogEntry.load(self.store, parser=Parser())
 
     def test_manager_can_load_objects_from_file(self):
-        values = self.manager.all()
+        manager = self.store.query(LogEntry, adapter=Adapter())
+        values = list(manager.all())
         self.assertEqual(len(values), 3)
 
         self.assertEqual(values[0].level, 'INFO')
@@ -44,6 +44,7 @@ class TestFileBackend(unittest.TestCase):
         self.assertEqual(values[2].message, 'Hello there')
 
     def test_can_filter_data_from_file_backend(self):
-        self.assertEqual(self.manager.all().count(), 3)
-        self.assertEqual(self.manager.filter(level='ERROR').count(), 1)
-        self.assertEqual(self.manager.filter(level='ERROR').first().message, 'Something BAD happened')
+        manager = self.store.query(LogEntry, adapter=Adapter())
+        self.assertEqual(manager.all().count(), 3)
+        self.assertEqual(manager.filter(level='ERROR').count(), 1)
+        self.assertEqual(manager.filter(level='ERROR').first().message, 'Something BAD happened')
