@@ -15,9 +15,9 @@ What is lifter?
     :target: https://travis-ci.org/EliotBerriot/lifter
 
 
-Lifter is a lightweight query engine for Python iterables, inspired by Django ORM.
+Lifter is a lightweight query engine, inspired by Django ORM and SQLAlchemy.
 
-If you find if painful to gather data from collections of Python objects or dictionaries, such as API results, lifter is for you!
+Its goal is to provide a unique interface to query any type of data, regardless of the underlying query language or data backend (SQL, REST, Python objects...).
 
 **Warning**: This package is still in alpha state and a lot of work is still needed to make queries faster and efficient.
 Contributions are welcome :)
@@ -34,7 +34,7 @@ Features
 * Queryset API similar to Django_  and SQLAlchemy_
 * Lazy querysets
 * Composable queries
-* Lightweight: absolutely no dependencies
+* Lightweight: very little dependencies
 * Tested and working on Python 2.7 to Python 3.5
 
 .. _Django: https://docs.djangoproject.com/en/1.9/ref/models/querysets/
@@ -82,10 +82,14 @@ To use lifter in your project, you'll only need the following instructions:
 
 .. code-block:: python
 
-    import lifter
+    import lifter.models
+    from lifter.backends.python import IterableStore
 
-    User = lifter.models.Model('User')
-    manager = User.load(users)
+    class User(lifter.models.Model):
+        pass
+
+    store = IterableStore(users)
+    manager = store.query(User)
 
 Getting getting all active 26 years old users:
 
@@ -144,7 +148,7 @@ Getting minimum and average women age:
     minimum_woman_age = min(women_ages)
 
     # lifter
-    results = manager.filter(User.gender='female')\
+    results = manager.filter(User.gender == 'female')\
                      .aggregate((User.age, mean), (User.age, min))
 
 As you can see, lifter's version is shorter and more readable than vanilla Python.

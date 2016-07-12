@@ -22,7 +22,10 @@ Contents:
 
    overview
    installation
-   usage
+   quickstart
+   query
+   backends/index
+   performance
    contributing
    authors
    history

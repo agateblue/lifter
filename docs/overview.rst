@@ -4,48 +4,82 @@ Overview
 Lifter is a package that heavily inspires from `Django's ORM`_ in the way it works.
 Some parts of the API are also quite similar to `TinyDB`_ and `SQLAlchemy`_.
 
+However, lifter intends to work with any data provider, meaning you can query data from various sources, using the same high-level API.
+
+If implemented correctly, you can for exemple work on a project with static JSON data from a file during development, and easily switch to
+a real REST API when it's time.
+
 .. _`Django's ORM`: https://docs.djangoproject.com/en/1.9/topics/db/queries/
 .. _TinyDB: http://tinydb.readthedocs.org/en/latest/
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_1_0/orm/tutorial.html#common-filter-operators
 
-Supported data structures
--------------------------
+To achieve this, lifter tries to be as agnostic and flexible as possible regarding data sources, while adressing most common use cases.
 
-Lifter operates on collections of objects. A collection can be any Python iterable, like
-a list, a tuple, or even a generator. As long as lifter can iterate on it, everythings fine.
+The big picture
+---------------
 
-Such collections must contain similarly structured objects in order for lifter to work:
+Lifter is made of several layers, each one fulfilling a specific task.
 
-.. code-block:: python
+.. graphviz::
 
-    # okay
-    tags = [
-        {'name': 'python', 'articles_count': 134},
-        {'name': 'ruby', 'articles_count': 42},
-        {'name': 'php', 'articles_count': 23},
-    ]
+    digraph query {
+        label="Journey of a query in lifter";
+        labelloc="t";
+        Manager -> Store;
+        "Store" -> "Compiled query";
+        "Compiled query" -> "Backend (SQL, REST...)";
+        "Backend (SQL, REST...)" -> "Raw results";
+        "Raw results" -> "Adapter";
+        "Adapter" -> "Model instances";
 
-    # okay
-    class User(object):
-        def __init__(self, age, first_name, last_name):
-            self.age = age
-            self.first_name = first_name
-            self.last_name = last_name
+    }
 
-    users = [
-        User(42, 'Douglas', 'Adams'),
-        User(867, 'Legolas', 'The Elf'),
-        User(98, 'Benjamin', 'Button'),
-    ]
+Models
+******
 
-    # not okay
-    users_and_tags = [tags[0], users[0], tags[1], users[1]]
+Just like Django, lifter models are Python classes representing your data. You could have a ``User`` model and a ``Group`` model.
 
-If your iterable contains mappings (such as dictionaries), lifter will treat them as regular objects,
-and transparently access keys instead of attributes when filtering, retrieving and aggregating values.
+Stores
+******
 
-Supported queries
------------------
+Stores objects aggregates global information regarding a data source. A good example of store would be a SQL database.
+
+Refined stores
+**************
+
+Refined stores are responsible for parsing queries about a model and returning corresponding data.
+
+If we go back to our previous example, a refined store would be used to connect to our SQL database and run queries against our users table.
+
+Adapters
+********
+
+Because we don't want to deal with raw data such as SQL or JSON Responses, adapters are reponsible for converting
+data returned by our refined stores to actual model instances.
+test
+Managers
+*********
+
+Managers are the main entrypoint in lifter to issue queries on our data stores.
+
+Querysets
+**********
+
+Just like in Django, querysets provide a high-level API to query, exclude, filter results from our stores.
+Internally, querysets build query objects, that are then interpreted by the refined store.
+
+Backends
+********
+
+We try to keep lifter's code as agnostic and generic as possible.
+
+Because of that, logic that is specific to a data source should be stored in a dedicated module, such modules being named ``backends``.
+
+Lifter comes build-in with a :doc:`few backends </backends/index>`, the most advanced being the Python backend. However, work is in progress
+to implement file and HTTP backends.
+
+The query language
+-------------------
 
 At the moment, lifter support two ways two make queries:
 
