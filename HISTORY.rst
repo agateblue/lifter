@@ -2,6 +2,25 @@
 History
 =======
 
+0.3 (2016-7-12)
+---------------
+
+This is a big release, that breaks backward-compatibility with previous ones.
+
+This release implements a new flow to help implementing #33. The general idea
+is to make lifter generic and be able to query any data source with it.
+
+The 0.3 release sets the foundation for that by moving all python-iterable related code to a dedicated backend,
+and by implementing the Store -> Adapter > Model layout to deal with queries and result parsing.
+
+An additional, very simple, ``filesystem`` backend is provided to demonstrate how you can implement your own datasource in lifter.
+
+The work, though, is still incomplete, because the `filesystem` store internally uses the `IterableStore` from the python backend.
+
+A real store (such as REST or SQL) would be able to understand queries and pass them to a real backend (PostgreSQL).
+
+Anyway, we're in the good direction here :)
+
 0.2.1 (2016-3-4)
 ----------------
 
