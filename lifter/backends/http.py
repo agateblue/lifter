@@ -9,7 +9,7 @@ class HTTPRefinedStore(store.RefinedStore):
         # first, we parse the whole data to a proper python iterable we'll then pass
         # to a dedicated adapter
         cleaned_data = self.clean_data(data)
-        return [self.model(**self.adapter.parse(row)) for row in cleaned_data]
+        return [self.adapter.parse(row, self.model) for row in cleaned_data]
 
 
     def request_factory(self, method, url, headers={}, **kwargs):

@@ -1,6 +1,6 @@
 
 from . import query
-from .backends.base import BaseModel
+from .backends.base import BaseModel, Meta
 from .fields import *
 
 

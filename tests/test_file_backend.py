@@ -18,7 +18,7 @@ class LogEntry(Model):
 class Adapter(RegexAdapter):
     regex='(?P<level>.*) - (?P<date>.*) - (?P<message>.*)'
 
-    def clean_date(self, value):
+    def clean_date(self, data, value, model, field):
         year, month, day = [int(part) for part in value.split('/')]
         return datetime.date(year, month, day)
 

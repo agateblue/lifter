@@ -7,7 +7,7 @@ class RefinedFileStore(RefinedIterableStore):
 
     def get_all_values(self, query):
         with open(self.parent.path) as f:
-            return [self.model(**self.adapter.parse(line)) for line in f]
+            return [self.adapter.parse(line, self.model) for line in f]
 
 class FileStore(IterableStore):
     refined_class = RefinedFileStore
