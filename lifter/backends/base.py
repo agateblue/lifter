@@ -10,26 +10,26 @@ class Meta(object):
     def __init__(self, fields):
         self.fields = fields
 
+def setup_fields(attrs):
+    """
+    Collect all fields declared on the class and remove them from attrs
+    """
+    fields = {}
+    iterator = list(attrs.items())
+    for key, value in iterator:
+        if not isinstance(value, Field):
+            continue
+        fields[key] = value
+        del attrs[key]
+    return fields
 
 class BaseModelMeta(type):
     def __new__(cls, name, bases, attrs):
-        fields = cls.setup_fields(cls, attrs)
+        fields = setup_fields(attrs)
         meta = Meta(fields=fields)
         attrs['_meta'] = meta
-        return type.__new__(cls, name, bases, attrs)
+        return super(BaseModelMeta, cls).__new__(cls, name, bases, attrs)
 
-    def setup_fields(cls, attrs):
-        """
-        Collect all fields declared on the class and remove them from attrs
-        """
-        fields = {}
-        iterator = list(attrs.items())
-        for key, value in iterator:
-            if not isinstance(value, Field):
-                continue
-            fields[key] = value
-            del attrs[key]
-        return fields
 
     def __getattr__(cls, key):
         return getattr(query.Path(), key)
