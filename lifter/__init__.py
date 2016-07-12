@@ -2,4 +2,4 @@
 
 __author__ = 'Eliot Berriot'
 __email__ = 'contact@eliotberriot.com'
-__version__ = '0.2.1'
+__version__ = '0.3'
