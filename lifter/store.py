@@ -1,5 +1,20 @@
 from . import managers
+from . import exceptions
 
+def cast_results_to_model(f):
+    def wrapper(self, query, *args, **kwargs):
+        results = f(self, query, *args, **kwargs)
+        if query.hints.get('force_single', False):
+            length = len(results)
+            if length > 1:
+                raise exceptions.MultipleObjectsReturned()
+            if length == 0:
+                raise exceptions.DoesNotExist()
+            return self.adapter.parse(results[0], self.model)
+        else:
+            return [self.adapter.parse(result, self.model)
+                    for result in results]
+    return wrapper
 
 class Store(object):
     """

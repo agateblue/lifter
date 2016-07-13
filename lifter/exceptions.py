@@ -13,3 +13,9 @@ class MultipleObjectsReturned(LifterException, ValueError):
 
 class MissingAttribute(LifterException, ValueError):
     pass
+
+
+class UnsupportedQuery(LifterException, ValueError):
+    def __init__(self, message, query):
+        super(UnsupportedQuery, self).__init__(message)
+        self.query = query

@@ -426,3 +426,15 @@ class QuerySet(object):
             new_query = self.query.clone(action='exists')
             return self.manager.execute(new_query)
         return len(self) > 0
+
+    def locally(self):
+        """
+        Will execute the current queryset and pass it to the python backend
+        so user can run query on the local dataset (instead of contacting the store)
+        """
+
+        from .backends import python
+        from . import models
+
+        store = python.IterableStore(values=self)
+        return store.query(self.manager.model).all()
