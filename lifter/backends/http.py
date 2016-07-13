@@ -62,6 +62,13 @@ class RESTRefinedStore(store.RefinedStore):
         return self.parent.session.send(request)
 
     def parse_response(self, response):
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            if response.status_code >= 400 and response.status_code < 500:
+                raise exceptions.BadQuery(str(e))
+            if response.status_code >= 500:
+                raise exceptions.StoreError(str(e)) 
         parser = self.get_parser(response)
         return parser.parse(response.content.decode('utf-8'))
 

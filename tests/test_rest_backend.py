@@ -134,3 +134,19 @@ class TestRESTBackend(unittest.TestCase):
 
         with self.assertRaises(exceptions.MultipleObjectsReturned):
             result = manager.all().get(author='typicode')
+
+    @requests_mock.mock()
+    def test_400_error_raise_querry_error(self, m):
+        m.get('http://api/posts', text='', status_code=400)
+        manager = self.store.query(Post, adapter=adapters.DictAdapter())
+
+        with self.assertRaises(exceptions.BadQuery):
+            result = manager.all().get(id=1)
+
+    @requests_mock.mock()
+    def test_500_error_raise_store_error(self, m):
+        m.get('http://api/posts', text='', status_code=500)
+        manager = self.store.query(Post, adapter=adapters.DictAdapter())
+
+        with self.assertRaises(exceptions.StoreError):
+            result = manager.all().get(id=1)
