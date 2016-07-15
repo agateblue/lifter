@@ -8,6 +8,7 @@ from .. import exceptions
 from .. import utils
 
 class RESTRefinedStore(store.RefinedStore):
+    pluralize_model_name = True
 
     def get_out_attribute_names_converter(self):
         return utils.to_camel_case
@@ -37,7 +38,14 @@ class RESTRefinedStore(store.RefinedStore):
         return request
 
     def get_model_url_part(self):
-        return self.model.__name__.lower() + 's'
+        app_part = self.model._meta.app_name
+        if self.pluralize_model_name:
+            model_part = self.model._meta.name_plural
+        else:
+            model_part = self.model._meta.name
+        if app_part:
+            return app_part + '/' + model_part
+        return model_part
 
     def build_query_url(self, query):
         model_part = self.get_model_url_part()
@@ -55,7 +63,7 @@ class RESTRefinedStore(store.RefinedStore):
         qs = {}
         if query.filters:
             builder = self.get_querystring_builder(query)
-            qs.update(builder.build(query.filters))
+            qs.update(builder.build(query.filters, orderings=query.orderings))
         return qs
 
     def get_response(self, request):
@@ -68,7 +76,7 @@ class RESTRefinedStore(store.RefinedStore):
             if response.status_code >= 400 and response.status_code < 500:
                 raise exceptions.BadQuery(str(e))
             if response.status_code >= 500:
-                raise exceptions.StoreError(str(e)) 
+                raise exceptions.StoreError(str(e))
         parser = self.get_parser(response)
         return parser.parse(response.content.decode('utf-8'))
 
@@ -76,13 +84,20 @@ class RESTRefinedStore(store.RefinedStore):
         # if response.headers['Content-Type'] in ['application/javascript', 'application/json']:
         return parsers.JSONParser()
 
+    def get_results(self, data, query):
+        return data
+
     @store.cast_results_to_model
     def handle_select(self, query):
         url = self.build_query_url(query)
         request = self.build_request(url, query)
         response = self.get_response(request)
-        return self.parse_response(response)
+        parsed_response = self.parse_response(response)
+        return self.get_results(parsed_response, query)
 
+    def handle_count(self, query):
+        query = query.clone(action='select')
+        return len(self.handle_select(query))
 
 class RESTStore(store.Store):
 
@@ -113,11 +128,16 @@ class QueryStringBuilder(object):
         if hasattr(node, 'operator') and node.operator not in self.support_table['operators']:
             raise exceptions.UnsupportedQuery('{0} operator not supported'.format(node.operator), query=node)
 
-    def get_as_dict(self, node):
+    def get_filters_as_dict(self, node):
         raise NotImplementedError()
 
-    def build(self, node):
-        return self.get_as_dict(node)
+    def build(self, node=None, orderings=None):
+        r = {}
+        if node:
+            r.update(self.get_filters_as_dict(node))
+        if orderings:
+            r.update(self.get_orderings_as_dict(orderings))
+        return r
 
 class SimpleQueryStringBuilder(QueryStringBuilder):
 
@@ -130,7 +150,7 @@ class SimpleQueryStringBuilder(QueryStringBuilder):
         ]
     }
 
-    def get_as_dict(self, node):
+    def get_filters_as_dict(self, node):
         d = {}
 
         for key, value in self.iterate(node):

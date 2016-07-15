@@ -107,7 +107,7 @@ class TestQueries(TestBase):
     @mock.patch('lifter.query.QuerySet.iterator')
     def test_queries_combine_to_a_single_one(self, mocked_iterator):
         queryset = self.manager.filter(TestModel.a == 1).filter(TestModel.order == 1)
-        queryset.count()
+        len(queryset)
         self.assertEqual(mocked_iterator.call_count, 1)
 
     def test_can_exclude(self):
@@ -142,8 +142,6 @@ class TestQueries(TestBase):
 
         self.assertEqual(self.dict_manager.filter(TestModel.a == 1).count(), 2)
 
-        # force reload
-        self.assertEqual(self.manager.filter(TestModel.a == 1).count(True), 2)
 
 
     def test_first(self):
@@ -391,7 +389,7 @@ class TestAggregation(TestBase):
         }
         aggregates = (lifter.aggregates.Sum('a'), lifter.aggregates.Avg('a'))
         self.assertEqual(self.manager.aggregate(*aggregates), expected)
-        
+
     def test_sum(self):
         self.assertEqual(self.manager.aggregate((TestModel.a, sum)), {'a__sum': 6})
         self.assertEqual(self.manager.aggregate(total=(TestModel.a, sum)), {'total': 6})

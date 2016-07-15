@@ -7,8 +7,15 @@ from ..fields import Field
 
 class Meta(object):
     """Much like django Model.Meta"""
-    def __init__(self, fields):
+    def __init__(self, fields, name, name_plural=None, app_name=None):
         self.fields = fields
+        self.app_name = app_name
+        self.name = name
+        if not name_plural:
+            self.name_plural = self.name + 's'
+        else:
+            self.name_plural = name_plural
+
 
 def setup_fields(attrs):
     """
@@ -23,10 +30,27 @@ def setup_fields(attrs):
         del attrs[key]
     return fields
 
+
+META_ALLOWED_FIELDS = [
+    'name',
+    'name_plural',
+    'app_name',
+]
 class BaseModelMeta(type):
     def __new__(cls, name, bases, attrs):
-        fields = setup_fields(attrs)
-        meta = Meta(fields=fields)
+        declared_meta = attrs.get('Meta')
+        meta_kwargs = {
+
+        }
+        if declared_meta:
+            # a class Meta was found on the model class
+            for field in META_ALLOWED_FIELDS:
+                meta_kwargs[field] = getattr(declared_meta, field, None)
+
+        meta_kwargs['fields'] = setup_fields(attrs)
+        if not meta_kwargs.get('name', None):
+            meta_kwargs['name'] = name.lower()
+        meta = Meta(**meta_kwargs)
         attrs['_meta'] = meta
         return super(BaseModelMeta, cls).__new__(cls, name, bases, attrs)
 

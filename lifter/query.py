@@ -110,6 +110,16 @@ class QueryNodeWrapper(BaseQueryNode):
             inverted_repr = ''
         return '<QueryNodeWrapper {0}{1} ({2})>'.format(inverted_repr, self.operator, self.operator.join([repr(self.subqueries)]))
 
+    def __and__(self, other):
+        if hasattr(other, 'operator'):
+            return super(QueryNodeWrapper, self).__and__(other)
+        return self.clone(subqueries=list(self.subqueries) + [other])
+
+    def __or__(self, other):
+        if hasattr(other, 'operator'):
+            return super(QueryNodeWrapper, self).__or__(other)
+        return self.clone(subqueries=list(self.subqueries) + [other])
+
     def clone(self, **kwargs):
         kwargs.setdefault('inverted', self.inverted)
         new_query = self.__class__(
@@ -158,13 +168,40 @@ def lookup_to_path(lookup):
     return path
 
 
+class Window(object):
+    """Used to help dealing with sliced querysets"""
+
+    def __init__(self, index):
+        if isinstance(index, slice):
+            self.start = index.start
+            self.stop = index.stop
+            if not self.stop:
+                raise ValueError('you must provide a stop when slicing a queryset')
+        else:
+            raise ValueError('Accessing a single element from a queryset is not supported')
+
+    def as_slice(self):
+        return slice(self.start, self.stop)
+
+    @property
+    def start_as_int(self):
+        try:
+            return int(self.start)
+        except TypeError:
+            return 0
+
+    @property
+    def size(self):
+        return self.stop - self.start_as_int
+
 class Query(object):
     """Will gather all query related data (queried field, ordering, distinct, etc.)
     and be passed to the manager"""
-    def __init__(self, action, filters=None, orderings=[], **hints):
+    def __init__(self, action, filters=None, window=None, orderings=[], **hints):
         self.filters = filters
         self.orderings = orderings
         self.action = action
+        self.window = window
         self.hints = hints
 
     def clone(self, **kwargs):
@@ -224,7 +261,8 @@ class QuerySet(object):
             yield value
 
     def __getitem__(self, index):
-        return self.data[index]
+        query = self.query.clone(window=Window(index))
+        return self._clone(query=query)
 
     def _clone(self, query=None, orderings=None, **kwargs):
         orderings = orderings or self.orderings
@@ -299,11 +337,9 @@ class QuerySet(object):
         query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
         return self._clone(query=query)
 
-    def count(self, from_backend=False):
-        if from_backend:
-            new_query = self.query.clone(action='count')
-            return self.manager.execute(new_query)
-        return len(self.data)
+    def count(self):
+        new_query = self.query.clone(action='count')
+        return self.manager.execute(new_query)
 
     def _parse_ordering(self, *paths):
         orderings = []

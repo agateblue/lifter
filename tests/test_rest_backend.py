@@ -14,6 +14,8 @@ from lifter import adapters
 from lifter import models
 from lifter import exceptions
 
+from . import mixins
+
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'data', 'db.json')
 
@@ -22,7 +24,7 @@ class Post(models.Model):
     pass
 
 
-class TestRESTBackend(unittest.TestCase):
+class TestRESTBackend(mixins.HTTPMixin):
 
     def setUp(self):
         self.store = http.RESTStore(base_url='http://api')
@@ -32,9 +34,6 @@ class TestRESTBackend(unittest.TestCase):
 
         self.db = json.loads(db_content)
 
-    def assertDictEqualsModel(self, d, m):
-        for key, value in d.items():
-            self.assertEqual(getattr(m, key), value)
 
     def test_dict_adapter_works_recursively(self):
         payload = {

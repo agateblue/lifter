@@ -1,4 +1,5 @@
 from . import managers
+from . import adapters
 from . import exceptions
 
 def cast_results_to_model(f):
@@ -48,6 +49,11 @@ class RefinedStore(object):
         self.parent = parent
         self.model = model
         self.adapter = adapter
+        if not self.adapter:
+            self.adapter = self.get_default_adapter()
+
+    def get_default_adapter(self):
+        return adapters.DictAdapter(recursive=True)
 
     def get_manager(self, **kwargs):
         return self.manager_class(model=self.model, store=self, **kwargs)

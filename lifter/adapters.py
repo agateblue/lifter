@@ -50,15 +50,22 @@ class DictAdapter(Adapter):
     """
     def __init__(self, *args, **kwargs):
         self.recursive = kwargs.pop('recursive', True)
+        # if any, we'll map only attributes under the given key
+        self.key = kwargs.pop('key', None)
         super(DictAdapter, self).__init__(*args, **kwargs)
 
     def get_raw_data(self, data, model):
+        if self.key:
+            to_convert = data[self.key]
+        else:
+            to_convert = data
+
         if self.recursive:
             # we convert subdirectories to proper model instances
-            for key, value in data.items():
+            for key, value in to_convert.items():
                 if isinstance(value, dict):
-                    data[key] = self.parse(value, models.Model)
-        return data
+                    to_convert[key] = self.parse(value, models.Model)
+        return to_convert
 
 class RegexAdapter(Adapter):
     def __init__(self, *args, **kwargs):
