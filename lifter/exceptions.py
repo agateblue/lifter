@@ -27,7 +27,7 @@ class BadQuery(LifterException, ValueError):
     pass
 
 
-class StoreError(LifterException, ConnectionError):
+class StoreError(LifterException):
     """
     The store cannot answer our query
     """
