@@ -144,6 +144,8 @@ class RefinedIterableStore(store.RefinedStore):
 
         if query.hints.get('distinct', False):
             iterator = utils.unique_everseen(iterator)
+        if query.window:
+            return list(iterator)[query.window.as_slice()]
         return iterator
 
     def handle_values(self, query):

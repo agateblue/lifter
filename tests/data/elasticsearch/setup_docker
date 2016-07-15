@@ -1,0 +1,21 @@
+docker run -d -p 9200:9200 elasticsearch:2
+
+sleep 10
+
+curl -XPUT http://localhost:9200/shakespeare -d '
+{
+ "mappings" : {
+  "_default_" : {
+   "properties" : {
+    "speaker" : {"type": "string", "index" : "not_analyzed" },
+    "play_name" : {"type": "string", "index" : "not_analyzed" },
+    "line_id" : { "type" : "integer" },
+    "speech_number" : { "type" : "integer" }
+   }
+  }
+ }
+}
+';
+
+wget -O /tmp/shakespeare.json https://www.elastic.co/guide/en/kibana/3.0/snippets/shakespeare.json
+curl -XPUT localhost:9200/_bulk --data-binary @/tmp/shakespeare.json

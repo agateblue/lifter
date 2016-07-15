@@ -1,5 +1,6 @@
-
+import re
 import operator
+
 from . import exceptions
 
 
@@ -62,3 +63,13 @@ def unique_everseen(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
+
+
+def to_snake_case(s):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', s)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+def to_camel_case(s):
+    new_s = ''.join(x.capitalize() or '_' for x in s.split('_'))
+    lower_first_letter = lambda s: s[:1].lower() + s[1:] if s else ''
+    return lower_first_letter(new_s)
