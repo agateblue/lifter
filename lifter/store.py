@@ -1,6 +1,10 @@
 from . import managers
 from . import adapters
 from . import exceptions
+from . import models
+from . import query
+from . import utils
+
 
 def cast_results_to_model(f):
     def wrapper(self, query, *args, **kwargs):
@@ -17,6 +21,38 @@ def cast_results_to_model(f):
                     for result in results]
     return wrapper
 
+
+def path_to_value(data, path, **kwargs):
+    soft_fail = kwargs.pop('soft_fail', False)
+    getters = [utils.attrgetter(part) for part in path.path]
+
+    try:
+        for getter in getters:
+            data = getter(data)
+    except exceptions.MissingAttribute:
+        if soft_fail:
+            return query.Path.DoesNotExist
+        raise
+    return data
+
+def cast_to_values(f):
+
+    def wrapper(self, query):
+        from .backends.python import IterableStore
+        results = f(self, query)
+        if query.hints['mode'] == 'mapping':
+            getter = lambda val: {str(path): path_to_value(val, path) for path in query.hints['paths']}
+        else:
+            if query.hints.get('flat', False):
+                getter = lambda val: path_to_value(val, query.hints['paths'][0])
+            else:
+                getter = lambda val: tuple(path_to_value(val, path) for path in query.hints['paths'])
+        values = map(getter, results)
+
+        return IterableStore(values).query(models.Model).all()
+
+    return wrapper
+    
 class Store(object):
     """
     A place to look for data (python iterable, database, rest api...)

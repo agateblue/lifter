@@ -174,3 +174,28 @@ class TestES2Backend(mixins.HTTPMixin):
         builder = elasticsearch.ES2QueryStringBuilder()
 
         self.assertEqual(builder.build(orderings=qs.query.orderings), expected)
+
+    @requests_mock.mock()
+    def test_can_retrieve_values(self, m):
+        manager = self.store.query(Scene)
+        data = self.get_data('values.json')
+        self.mock_request(m, 'http://es/shakespeare/scene/_search?_source=speaker,line_id', data)
+        manager = self.store.query(Scene)
+
+        results = manager.all().values('speaker', 'line_id')
+
+        for i, row in enumerate(results):
+            self.assertEqual(row, data['hits']['hits'][i]['_source'])
+
+    @requests_mock.mock()
+    def test_can_retrieve_values_list(self, m):
+        manager = self.store.query(Scene)
+        data = self.get_data('values.json')
+        self.mock_request(m, 'http://es/shakespeare/scene/_search?_source=speaker,line_id', data)
+        manager = self.store.query(Scene)
+
+        results = manager.all().values_list('speaker', 'line_id')
+
+        for i, row in enumerate(results):
+            expected = data['hits']['hits'][i]['_source']['speaker'], data['hits']['hits'][i]['_source']['line_id']
+            self.assertEqual(row, expected)

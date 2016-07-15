@@ -1,10 +1,14 @@
 import operator
 from . import http
 from .. import adapters
+from .. import store
 
 
 class ES2RefinedStore(http.RESTRefinedStore):
     pluralize_model_name = False
+
+    def get_out_attribute_names_converter(self):
+        return lambda v: v
 
     def get_default_adapter(self):
         return adapters.DictAdapter(recursive=True, key='_source')
@@ -32,6 +36,11 @@ class ES2RefinedStore(http.RESTRefinedStore):
         if query.window:
             qs['size'] = query.window.size
             qs['from'] = query.window.start_as_int
+
+        subsets = [str(path) for path in query.hints.get('paths', [])]
+        if subsets:
+            qs['_source'] = ','.join(subsets)
+
         return qs
 
     def handle_count(self, query):
@@ -40,6 +49,10 @@ class ES2RefinedStore(http.RESTRefinedStore):
         response = self.get_response(request)
         parsed_response = self.parse_response(response)
         return parsed_response['count']
+
+    @store.cast_to_values
+    def handle_values(self, query):
+        return self.handle_select(query.clone(action='select'))
 
 
 class ES2Store(http.RESTStore):
