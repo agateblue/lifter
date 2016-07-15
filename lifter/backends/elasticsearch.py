@@ -46,11 +46,11 @@ class ES2Store(http.RESTStore):
     refined_class = ES2RefinedStore
 
 
-def _get_eq(node):
+def _get_eq(lookup):
     op = ''
-    if isinstance(node.test_args[0], str):
-        return op, '"{0}"'.format(node.test_args[0])
-    return op, node.test_args[0]
+    if isinstance(lookup.reference_value, str):
+        return op, '"{0}"'.format(lookup.reference_value)
+    return op, lookup.reference_value
 
 class ES2QueryStringBuilder(http.QueryStringBuilder):
     """
@@ -58,12 +58,12 @@ class ES2QueryStringBuilder(http.QueryStringBuilder):
     """
 
     support_table = {
-        'tests': [
-            operator.eq,
-            operator.gt,
-            operator.ge,
-            operator.lt,
-            operator.le,
+        'lookups': [
+            'eq',
+            'gt',
+            'gte',
+            'lt',
+            'lte',
         ],
         'operators': [
             'AND',
@@ -72,12 +72,12 @@ class ES2QueryStringBuilder(http.QueryStringBuilder):
         ]
     }
 
-    tests_mapping = {
-        operator.eq: _get_eq,
-        operator.gt: lambda node: ('>', node.test_args[0]),
-        operator.ge: lambda node: ('>=', node.test_args[0]),
-        operator.lt: lambda node: ('<', node.test_args[0]),
-        operator.le: lambda node: ('<=', node.test_args[0]),
+    lookups_mapping = {
+        'eq': _get_eq,
+        'gt': lambda lookup: ('>', lookup.reference_value),
+        'gte': lambda lookup: ('>=', lookup.reference_value),
+        'lt': lambda lookup: ('<', lookup.reference_value),
+        'lte': lambda lookup: ('<=', lookup.reference_value),
 
     }
 
@@ -98,7 +98,7 @@ class ES2QueryStringBuilder(http.QueryStringBuilder):
         }
 
     def cast_test(self, node):
-        return self.tests_mapping[node.test](node)
+        return self.lookups_mapping[node.lookup.registry_name](node.lookup)
 
     def get_query_as_str(self, node):
         self.check_support(node)

@@ -1,4 +1,3 @@
-import operator
 import requests
 
 from .. import __version__
@@ -122,8 +121,8 @@ class QueryStringBuilder(object):
         if node.inverted and 'NOT' not in self.support_table['operators']:
             raise exceptions.UnsupportedQuery('NOT operator not supported', query=node)
 
-        if hasattr(node, 'test') and node.test not in self.support_table['tests']:
-            raise exceptions.UnsupportedQuery('{0} test not supported'.format(node.test), query=node)
+        if hasattr(node, 'lookup') and node.lookup.registry_name not in self.support_table['lookups']:
+            raise exceptions.UnsupportedQuery('{0} lookup not supported'.format(node.lookup), query=node)
 
         if hasattr(node, 'operator') and node.operator not in self.support_table['operators']:
             raise exceptions.UnsupportedQuery('{0} operator not supported'.format(node.operator), query=node)
@@ -142,8 +141,8 @@ class QueryStringBuilder(object):
 class SimpleQueryStringBuilder(QueryStringBuilder):
 
     support_table = {
-        'tests': [
-            operator.eq,
+        'lookups': [
+            'eq',
         ],
         'operators': [
             'AND',
@@ -167,4 +166,4 @@ class SimpleQueryStringBuilder(QueryStringBuilder):
                     yield r
         except AttributeError:
             # Leaf query
-            yield str(node.path), node.test_args[0]
+            yield str(node.path), node.lookup.reference_value

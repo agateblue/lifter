@@ -4,6 +4,7 @@ from collections import Iterator
 import random
 from . import exceptions
 from . import utils
+from . import lookups
 
 REPR_OUTPUT_SIZE = 10
 
@@ -30,35 +31,33 @@ class Path(object):
         return '<Path: {0}>'.format(self)
 
     def __eq__(self, other):
-        return QueryNode(path=self, test=operator.eq, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['eq'](other))
 
     def __ne__(self, other):
-        return QueryNode(path=self, test=operator.ne, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['ne'](other))
 
     def __gt__(self, other):
-        return QueryNode(path=self, test=operator.gt, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['gt'](other))
 
     def __ge__(self, other):
-        return QueryNode(path=self, test=operator.ge, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['gte'](other))
 
     def __lt__(self, other):
-        return QueryNode(path=self, test=operator.lt, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['lt'](other))
 
     def __le__(self, other):
-        return QueryNode(path=self, test=operator.le, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['lte'](other))
 
     def __invert__(self):
         """For reverse order_by"""
         return Ordering(self, reverse=True)
 
     def test(self, func, *args, **kwargs):
-        return QueryNode(path=self, test=func, test_args=args, test_kwargs=kwargs)
+        return QueryNode(path=self, lookup=lookups.registry['test'](func, *args, **kwargs))
 
     def exists(self):
-        return QueryNode(path=self, test=check_existence, path_kwargs={'soft_fail': True})
+        return QueryNode(path=self, lookup=lookups.registry['exists'](), path_kwargs={'soft_fail': True})
 
-def check_existence(v):
-    return v != Path.DoesNotExist
 
 class Ordering(object):
 
@@ -130,35 +129,21 @@ class QueryNodeWrapper(BaseQueryNode):
 
 class QueryNode(BaseQueryNode):
     """An abstract way to represent query, that will be compiled to an actual query by the manager"""
-    def __init__(self, path, test, test_args=[], test_kwargs={}, path_kwargs={}, **kwargs):
+    def __init__(self, path, lookup, path_kwargs={}, **kwargs):
         self.path_kwargs = path_kwargs
         super(QueryNode, self).__init__(**kwargs)
         self.path = path
-        self.test = test
-        self.test_args = test_args
-        self.test_kwargs = test_kwargs
+        self.lookup = lookup
 
     def __repr__(self):
-        if self.inverted:
-            test_repr = 'NOT {0}'.format(self.test)
-        else:
-            test_repr = repr(self.test)
-        return '<QueryNode {0}, {1}, {2}, {3}>'.format(self.path, test_repr, self.test_args, self.test_kwargs)
+        return '<QueryNode {0} {1}>'.format(self.path, self.lookup)
 
     def clone(self, **kwargs):
         kwargs.setdefault('path', self.path)
-        kwargs.setdefault('test', self.test)
-        kwargs.setdefault('test_args', self.test_args)
-        kwargs.setdefault('test_kwargs', self.test_kwargs)
+        kwargs.setdefault('lookup', self.lookup)
         kwargs.setdefault('inverted', self.inverted)
         kwargs.setdefault('path_kwargs', self.path_kwargs)
         return self.__class__(**kwargs)
-
-    def test(self, func):
-        return self._generate_test(
-            func, ('test', self.path, func)
-        )
-
 
 
 def lookup_to_path(lookup):
@@ -308,11 +293,20 @@ class QuerySet(object):
     def build_filter_from_kwargs(self, **kwargs):
         """Convert django-s like lookup to SQLAlchemy ones"""
         query = None
-        for lookup, value in kwargs.items():
-            path = lookup_to_path(lookup)
+        for path_to_convert, value in kwargs.items():
 
-            if hasattr(value, '__call__'):
-                q = path.test(value)
+            path_parts = path_to_convert.split('__')
+            lookup_class = None
+            try:
+                # We check if the path ends with something such as __gte, __lte...
+                lookup_class = lookups.registry[path_parts[-1]]
+                path_to_convert = '__'.join(path_parts[:-1])
+            except KeyError:
+                pass
+            path = lookup_to_path(path_to_convert)
+
+            if lookup_class:
+                q = QueryNode(path, lookup=lookup_class(value))
             else:
                 q = path == value
 

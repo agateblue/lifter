@@ -339,7 +339,7 @@ class TestLookups(TestBase):
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_range(self):
-        self.assertEqual(self.manager.filter(TestModel.order.test(lifter.lookups.value_range(2, 3))),
+        self.assertEqual(self.manager.filter(TestModel.order.test(lifter.lookups.value_range((2, 3)))),
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_istartswith(self):

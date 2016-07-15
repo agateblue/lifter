@@ -5,6 +5,7 @@ from .. import query
 from .. import models
 from .. import store
 from .. import exceptions
+from .. import lookups
 from .. import utils
 from .. import managers
 
@@ -41,6 +42,7 @@ def path_to_value(data, path, **kwargs):
 
 
 class QueryImpl(object):
+
     def __init__(self, base_query):
         self.base_query = base_query
         self.test = self.setup_test()
@@ -51,12 +53,11 @@ class QueryImpl(object):
             return get_wrapper(self.base_query)
         except AttributeError:
             # Leaf query
-            test = self.base_query.test
-            args, kwargs = self.base_query.test_args, self.base_query.test_kwargs
+            lookup = self.base_query.lookup
             inverted = self.base_query.inverted
             def leaf_query(obj):
                 value = path_to_value(obj, self.base_query.path, **self.base_query.path_kwargs)
-                result = test(value, *args, **kwargs)
+                result = lookup.lookup(value)
                 if inverted:
                     return not result
                 return result

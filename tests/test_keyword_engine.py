@@ -210,9 +210,9 @@ class TestQueries(TestBase):
             self.dict_manager.all().get(a=123)
 
     def test_can_filter_using_callable(self):
-        self.assertEqual(self.manager.filter(order=lambda v: v in [1, 3]), [self.OBJECTS[1], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(order__test=lambda v: v in [1, 3]), [self.OBJECTS[1], self.OBJECTS[2]])
 
-        self.assertEqual(self.dict_manager.filter(order=lambda v: v in [1, 3]), [self.DICTS[1], self.DICTS[2]])
+        self.assertEqual(self.dict_manager.filter(order__test=lambda v: v in [1, 3]), [self.DICTS[1], self.DICTS[2]])
 
     def test_values(self):
         expected = [
@@ -248,40 +248,40 @@ class TestQueries(TestBase):
 
 class TestLookups(TestBase):
     def test_gt(self):
-        self.assertEqual(self.manager.filter(order=lifter.lookups.gt(3)), [self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(order__gt=3), [self.OBJECTS[3]])
 
     def test_gte(self):
-        self.assertEqual(self.manager.filter(order=lifter.lookups.gte(3)), [self.OBJECTS[1], self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(order__gte=3), [self.OBJECTS[1], self.OBJECTS[3]])
 
     def test_lt(self):
-        self.assertEqual(self.manager.filter(order=lifter.lookups.lt(3)), [self.OBJECTS[0], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(order__lt=3), [self.OBJECTS[0], self.OBJECTS[2]])
 
     def test_lte(self):
-        self.assertEqual(self.manager.filter(order=lifter.lookups.lte(3)), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(order__lte=3), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_startswith(self):
-        self.assertEqual(self.manager.filter(label=lifter.lookups.startswith('a')), [self.OBJECTS[0], self.OBJECTS[1]])
+        self.assertEqual(self.manager.filter(label__startswith='a'), [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_endswith(self):
-        self.assertEqual(self.manager.filter(label=lifter.lookups.endswith('s')), [self.OBJECTS[1], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(label__endswith='s'), [self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_value_in(self):
-        self.assertEqual(self.manager.filter(label=lifter.lookups.value_in(['alabama', 'arkansas'])), [self.OBJECTS[0], self.OBJECTS[1]])
+        self.assertEqual(self.manager.filter(label__value_in=['alabama', 'arkansas']), [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_range(self):
-        self.assertEqual(self.manager.filter(order=lifter.lookups.value_range(2, 3)), [self.OBJECTS[0], self.OBJECTS[1]])
+        self.assertEqual(self.manager.filter(order__value_range=(2, 3)), [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_istartswith(self):
-        self.assertEqual(self.manager.filter(surname=lifter.lookups.istartswith('c')), [self.OBJECTS[1], self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(surname__istartswith='c'), [self.OBJECTS[1], self.OBJECTS[3]])
 
     def test_iendswith(self):
-        self.assertEqual(self.manager.filter(surname=lifter.lookups.iendswith('t')), [self.OBJECTS[0], self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(surname__iendswith='t'), [self.OBJECTS[0], self.OBJECTS[3]])
 
     def test_contains(self):
-        self.assertEqual(self.manager.filter(surname=lifter.lookups.contains('Lin')), [self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(surname__contains='Lin'), [self.OBJECTS[2]])
 
     def test_icontains(self):
-        self.assertEqual(self.manager.filter(surname=lifter.lookups.icontains('lin')), [self.OBJECTS[2], self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(surname__icontains='lin'), [self.OBJECTS[2], self.OBJECTS[3]])
 
 class TestAggregation(TestBase):
     def test_sum(self):
