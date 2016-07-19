@@ -12,6 +12,9 @@ class Aggregate(object):
     def aggregate(self, values):
         raise NotImplementedError
 
+    def __hash__(self):
+        return hash((self.attr_name,))
+        
 class Sum(Aggregate):
     name = 'sum'
 

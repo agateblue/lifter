@@ -165,5 +165,6 @@ class IterableStore(store.Store):
 
     refined_class = RefinedIterableStore
 
-    def __init__(self, values):
+    def __init__(self, values, *args, **kwargs):
         self.values = values
+        super(IterableStore, self).__init__(*args, **kwargs)

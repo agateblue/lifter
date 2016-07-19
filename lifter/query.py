@@ -16,7 +16,6 @@ class Path(object):
 
     def __init__(self, path=None):
         self.path = path or []
-        self._reversed = False # used for order by
         self._getters = []
 
     def __getattr__(self, part):
@@ -58,13 +57,20 @@ class Path(object):
     def exists(self):
         return QueryNode(path=self, lookup=lookups.registry['exists'](), path_kwargs={'soft_fail': True})
 
+    def __hash__(self):
+        return hash(tuple(self.path))
 
 class Ordering(object):
 
     def __init__(self, path, reverse=False, random=False):
         self.path = path
+        if random and reverse:
+            raise ValueError('You cannot provide both reverse and random argument for ordering')
         self.reverse = reverse
         self.random = random
+
+    def __hash__(self):
+        return hash((self.path, self.reverse, self.random))
 
 class Aggregation(object):
     def __init__(self, path, func):
@@ -127,6 +133,9 @@ class QueryNodeWrapper(BaseQueryNode):
             **kwargs)
         return new_query
 
+    def __hash__(self):
+        return hash((self.inverted, self.operator, tuple(self.subqueries)))
+
 class QueryNode(BaseQueryNode):
     """An abstract way to represent query, that will be compiled to an actual query by the manager"""
     def __init__(self, path, lookup, path_kwargs={}, **kwargs):
@@ -145,7 +154,13 @@ class QueryNode(BaseQueryNode):
         kwargs.setdefault('path_kwargs', self.path_kwargs)
         return self.__class__(**kwargs)
 
-
+    def __hash__(self):
+        return hash((
+            tuple(sorted(self.path_kwargs.items())),
+            self.path,
+            self.lookup,
+            self.inverted,
+        ))
 def lookup_to_path(lookup):
     path = Path()
     for part in lookup.replace('__', '.').split('.'):
@@ -179,6 +194,10 @@ class Window(object):
     def size(self):
         return self.stop - self.start_as_int
 
+    def __hash__(self):
+        return hash((self.start, self.stop))
+
+
 class Query(object):
     """Will gather all query related data (queried field, ordering, distinct, etc.)
     and be passed to the manager"""
@@ -201,6 +220,14 @@ class Query(object):
 
         return self.__class__(**base_kwargs)
 
+    def __hash__(self):
+        return hash((
+            self.filters,
+            tuple(self.orderings),
+            self.action,
+            self.window,
+            tuple(sorted(self.hints.items()))
+        ))
 class QuerySet(object):
     def __init__(self, manager, model, query=None, orderings=None, distinct=False):
         self.model = model
@@ -444,7 +471,7 @@ class QuerySet(object):
                 )
             )
 
-        query = self.query.clone(action='aggregate', aggregates=aggregates, flat=flat)
+        query = self.query.clone(action='aggregate', aggregates=tuple(aggregates), flat=flat)
         return self.manager.execute(query)
 
     def distinct(self):

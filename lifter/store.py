@@ -1,3 +1,5 @@
+import hashlib
+
 from . import managers
 from . import adapters
 from . import exceptions
@@ -52,13 +54,19 @@ def cast_to_values(f):
         return IterableStore(values).query(models.Model).all()
 
     return wrapper
-    
+
 class Store(object):
     """
     A place to look for data (python iterable, database, rest api...)
 
     The manager will apply the query on the store to return results
     """
+
+    def __init__(self, cache=None, identifier=None):
+        self.cache = cache
+        self.identifier = identifier
+        if self.cache and not self.identifier:
+            raise ValueError('You must provide a unique identifier if you want to use caching')
 
     def get_refined_store_class(self, model, adapter=None):
         return self.refined_class
@@ -88,8 +96,47 @@ class RefinedStore(object):
         if not self.adapter:
             self.adapter = self.get_default_adapter()
 
+    def hash_query(self, query):
+        h = hash(query)
+        return hashlib.sha512(str(h).encode('utf-8')).hexdigest()[:20]
+
+    def get_cache_key(self, query):
+        return ':'.join([
+            self.parent.identifier,
+            str(self.model._meta.app_name),
+            self.model._meta.name,
+            self.hash_query(query)
+        ])
+
+    def get_from_cache(self, query):
+        key = self.get_cache_key(query)
+        return self.parent.cache.get(key, reraise=True)
+
+    def set_in_cache(self, query, value):
+        key = self.get_cache_key(query)
+        return self.parent.cache.set(key, value)
+
     def get_default_adapter(self):
         return adapters.DictAdapter(recursive=True)
 
     def get_manager(self, **kwargs):
         return self.manager_class(model=self.model, store=self, **kwargs)
+
+    def execute_query(self, query):
+        try:
+            if self.parent.cache:
+                return self.get_from_cache(query)
+        except (exceptions.NotInCache, exceptions.DisabledCache):
+            pass
+
+        try:
+            handler = getattr(self, 'handle_{0}'.format(query.action))
+        except AttributeError:
+            raise ValueError('Unsupported {0} action'.format(query.action))
+
+        result = handler(query)
+
+        if self.parent.cache:
+            self.set_in_cache(query, result)
+
+        return result

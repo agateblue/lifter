@@ -25,6 +25,9 @@ class OneValueLookup(BaseLookup):
     def __str__(self):
         return '{0} {1}'.format(self.operator, self.reference_value)
 
+    def __hash__(self):
+        return hash((self.operator, self.reference_value))
+
 @register(name='eq')
 class eq(OneValueLookup):
     operator = '=='
@@ -110,11 +113,20 @@ class exists(BaseLookup):
         from .query import Path
         return value != Path.DoesNotExist
 
+    def __hash__(self):
+        return hash('exists')
+
 @register(name='value_range')
 class value_range(OneValueLookup):
     operator = 'in range'
-    def __init__(self, range_iterable):
-        self.start, self.end = range_iterable
+
+    @property
+    def start(self):
+        return self.reference_value[0]
+
+    @property
+    def end(self):
+        return self.reference_value[1]
 
     def lookup(self, value):
         return value >= self.start and value <= self.end

@@ -12,5 +12,6 @@ class RefinedFileStore(RefinedIterableStore):
 class FileStore(IterableStore):
     refined_class = RefinedFileStore
 
-    def __init__(self, path):
+    def __init__(self, path, *args, **kwargs):
         self.path = path
+        super(FileStore, self).__init__(values=[], *args, **kwargs)
