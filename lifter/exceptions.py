@@ -13,3 +13,29 @@ class MultipleObjectsReturned(LifterException, ValueError):
 
 class MissingAttribute(LifterException, ValueError):
     pass
+
+
+class UnsupportedQuery(LifterException, ValueError):
+    def __init__(self, message, query):
+        super(UnsupportedQuery, self).__init__(message)
+        self.query = query
+
+class BadQuery(LifterException, ValueError):
+    """
+    Bad query sent to the store
+    """
+    pass
+
+
+class StoreError(LifterException):
+    """
+    The store cannot answer our query
+    """
+    pass
+
+class NotInCache(LifterException, KeyError):
+    pass
+
+
+class DisabledCache(LifterException):
+    pass

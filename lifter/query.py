@@ -4,6 +4,7 @@ from collections import Iterator
 import random
 from . import exceptions
 from . import utils
+from . import lookups
 
 REPR_OUTPUT_SIZE = 10
 
@@ -15,10 +16,12 @@ class Path(object):
 
     def __init__(self, path=None):
         self.path = path or []
-        self._reversed = False # used for order by
         self._getters = []
 
     def __getattr__(self, part):
+        if part.startswith('__'):
+            raise AttributeError('You cannot access special methods on paths')
+
         return self.__class__(self.path + [part])
 
     __getitem__ = __getattr__
@@ -30,42 +33,47 @@ class Path(object):
         return '<Path: {0}>'.format(self)
 
     def __eq__(self, other):
-        return QueryNode(path=self, test=operator.eq, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['eq'](other))
 
     def __ne__(self, other):
-        return QueryNode(path=self, test=operator.ne, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['ne'](other))
 
     def __gt__(self, other):
-        return QueryNode(path=self, test=operator.gt, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['gt'](other))
 
     def __ge__(self, other):
-        return QueryNode(path=self, test=operator.ge, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['gte'](other))
 
     def __lt__(self, other):
-        return QueryNode(path=self, test=operator.lt, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['lt'](other))
 
     def __le__(self, other):
-        return QueryNode(path=self, test=operator.le, test_args=[other])
+        return QueryNode(path=self, lookup=lookups.registry['lte'](other))
 
     def __invert__(self):
         """For reverse order_by"""
         return Ordering(self, reverse=True)
 
     def test(self, func, *args, **kwargs):
-        return QueryNode(path=self, test=func, test_args=args, test_kwargs=kwargs)
+        return QueryNode(path=self, lookup=lookups.registry['test'](func, *args, **kwargs))
 
     def exists(self):
-        return QueryNode(path=self, test=check_existence, path_kwargs={'soft_fail': True})
+        return QueryNode(path=self, lookup=lookups.registry['exists'](), path_kwargs={'soft_fail': True})
 
-def check_existence(v):
-    return v != Path.DoesNotExist
+    def __hash__(self):
+        return hash(tuple(self.path))
 
 class Ordering(object):
 
     def __init__(self, path, reverse=False, random=False):
         self.path = path
+        if random and reverse:
+            raise ValueError('You cannot provide both reverse and random argument for ordering')
         self.reverse = reverse
         self.random = random
+
+    def __hash__(self):
+        return hash((self.path, self.reverse, self.random))
 
 class Aggregation(object):
     def __init__(self, path, func):
@@ -110,6 +118,16 @@ class QueryNodeWrapper(BaseQueryNode):
             inverted_repr = ''
         return '<QueryNodeWrapper {0}{1} ({2})>'.format(inverted_repr, self.operator, self.operator.join([repr(self.subqueries)]))
 
+    def __and__(self, other):
+        if hasattr(other, 'operator'):
+            return super(QueryNodeWrapper, self).__and__(other)
+        return self.clone(subqueries=list(self.subqueries) + [other])
+
+    def __or__(self, other):
+        if hasattr(other, 'operator'):
+            return super(QueryNodeWrapper, self).__or__(other)
+        return self.clone(subqueries=list(self.subqueries) + [other])
+
     def clone(self, **kwargs):
         kwargs.setdefault('inverted', self.inverted)
         new_query = self.__class__(
@@ -118,39 +136,34 @@ class QueryNodeWrapper(BaseQueryNode):
             **kwargs)
         return new_query
 
+    def __hash__(self):
+        return hash((self.inverted, self.operator, tuple(self.subqueries)))
+
 class QueryNode(BaseQueryNode):
     """An abstract way to represent query, that will be compiled to an actual query by the manager"""
-    def __init__(self, path, test, test_args=[], test_kwargs={}, path_kwargs={}, **kwargs):
+    def __init__(self, path, lookup, path_kwargs={}, **kwargs):
         self.path_kwargs = path_kwargs
         super(QueryNode, self).__init__(**kwargs)
         self.path = path
-        self.test = test
-        self.test_args = test_args
-        self.test_kwargs = test_kwargs
+        self.lookup = lookup
 
     def __repr__(self):
-        if self.inverted:
-            test_repr = 'NOT {0}'.format(self.test)
-        else:
-            test_repr = repr(self.test)
-        return '<QueryNode {0}, {1}, {2}, {3}>'.format(self.path, test_repr, self.test_args, self.test_kwargs)
+        return '<QueryNode {0} {1}>'.format(self.path, self.lookup)
 
     def clone(self, **kwargs):
         kwargs.setdefault('path', self.path)
-        kwargs.setdefault('test', self.test)
-        kwargs.setdefault('test_args', self.test_args)
-        kwargs.setdefault('test_kwargs', self.test_kwargs)
+        kwargs.setdefault('lookup', self.lookup)
         kwargs.setdefault('inverted', self.inverted)
         kwargs.setdefault('path_kwargs', self.path_kwargs)
         return self.__class__(**kwargs)
 
-    def test(self, func):
-        return self._generate_test(
-            func, ('test', self.path, func)
-        )
-
-
-
+    def __hash__(self):
+        return hash((
+            tuple(sorted(self.path_kwargs.items())),
+            self.path,
+            self.lookup,
+            self.inverted,
+        ))
 def lookup_to_path(lookup):
     path = Path()
     for part in lookup.replace('__', '.').split('.'):
@@ -158,13 +171,54 @@ def lookup_to_path(lookup):
     return path
 
 
+class Window(object):
+    """Used to help dealing with sliced querysets"""
+
+    def __init__(self, index):
+        if isinstance(index, slice):
+            self.start = index.start
+            self.stop = index.stop
+            if not self.stop:
+                raise ValueError('you must provide a stop when slicing a queryset')
+        else:
+            raise ValueError('Accessing a single element from a queryset is not supported')
+
+    def as_slice(self):
+        return slice(self.start, self.stop)
+
+    @property
+    def start_as_int(self):
+        try:
+            return int(self.start)
+        except TypeError:
+            return 0
+
+    @property
+    def size(self):
+        return self.stop - self.start_as_int
+
+    def __hash__(self):
+        return hash((self.start, self.stop))
+
+
 class Query(object):
     """Will gather all query related data (queried field, ordering, distinct, etc.)
     and be passed to the manager"""
-    def __init__(self, action, filters=None, orderings=[], **hints):
-        self.filters = filters
-        self.orderings = orderings
+    def __init__(self, action, filters=None, window=None, orderings=[], **hints):
         self.action = action
+        """The query action, a string, such as "select", "count", "insert"..."""
+
+        self.filters = filters
+        """A :py:class:`QueryNodeWrapper` or :py:class:`QueryNode` instance
+        representing additional filters on the query"""
+
+        self.orderings = orderings
+        """An iterable of :py:class:`Ordering` instances to apply a custom ordering to the
+        result set"""
+
+        self.window = window
+        """A :py:class:`Window` instance to deal with limits, offset and pagination"""
+
         self.hints = hints
 
     def clone(self, **kwargs):
@@ -179,6 +233,14 @@ class Query(object):
 
         return self.__class__(**base_kwargs)
 
+    def __hash__(self):
+        return hash((
+            self.filters,
+            tuple(self.orderings),
+            self.action,
+            self.window,
+            tuple(sorted(self.hints.items()))
+        ))
 class QuerySet(object):
     def __init__(self, manager, model, query=None, orderings=None, distinct=False):
         self.model = model
@@ -224,7 +286,8 @@ class QuerySet(object):
             yield value
 
     def __getitem__(self, index):
-        return self.data[index]
+        query = self.query.clone(window=Window(index))
+        return self._clone(query=query)
 
     def _clone(self, query=None, orderings=None, **kwargs):
         orderings = orderings or self.orderings
@@ -270,11 +333,20 @@ class QuerySet(object):
     def build_filter_from_kwargs(self, **kwargs):
         """Convert django-s like lookup to SQLAlchemy ones"""
         query = None
-        for lookup, value in kwargs.items():
-            path = lookup_to_path(lookup)
+        for path_to_convert, value in kwargs.items():
 
-            if hasattr(value, '__call__'):
-                q = path.test(value)
+            path_parts = path_to_convert.split('__')
+            lookup_class = None
+            try:
+                # We check if the path ends with something such as __gte, __lte...
+                lookup_class = lookups.registry[path_parts[-1]]
+                path_to_convert = '__'.join(path_parts[:-1])
+            except KeyError:
+                pass
+            path = lookup_to_path(path_to_convert)
+
+            if lookup_class:
+                q = QueryNode(path, lookup=lookup_class(value))
             else:
                 q = path == value
 
@@ -299,11 +371,9 @@ class QuerySet(object):
         query = self.query.clone(action='select', filters=self._combine_query_filters(final_filter))
         return self._clone(query=query)
 
-    def count(self, from_backend=False):
-        if from_backend:
-            new_query = self.query.clone(action='count')
-            return self.manager.execute(new_query)
-        return len(self.data)
+    def count(self):
+        new_query = self.query.clone(action='count')
+        return self.manager.execute(new_query)
 
     def _parse_ordering(self, *paths):
         orderings = []
@@ -414,7 +484,7 @@ class QuerySet(object):
                 )
             )
 
-        query = self.query.clone(action='aggregate', aggregates=aggregates, flat=flat)
+        query = self.query.clone(action='aggregate', aggregates=tuple(aggregates), flat=flat)
         return self.manager.execute(query)
 
     def distinct(self):
@@ -426,3 +496,15 @@ class QuerySet(object):
             new_query = self.query.clone(action='exists')
             return self.manager.execute(new_query)
         return len(self) > 0
+
+    def locally(self):
+        """
+        Will execute the current queryset and pass it to the python backend
+        so user can run query on the local dataset (instead of contacting the store)
+        """
+
+        from .backends import python
+        from . import models
+
+        store = python.IterableStore(values=self)
+        return store.query(self.manager.model).all()

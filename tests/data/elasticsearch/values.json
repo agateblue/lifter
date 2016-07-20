@@ -1,0 +1,114 @@
+{
+  "took" : 14,
+  "timed_out" : false,
+  "_shards" : {
+    "total" : 5,
+    "successful" : 5,
+    "failed" : 0
+  },
+  "hits" : {
+    "total" : 3595,
+    "max_score" : null,
+    "hits" : [ {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "98697",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "AARON",
+        "line_id" : 98698
+      },
+      "sort" : [ "AARON", 98698 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "24344",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "AEGEON",
+        "line_id" : 24345
+      },
+      "sort" : [ "AEGEON", 24345 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109467",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109468
+      },
+      "sort" : [ "ANTIGONUS", 109468 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109466",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109467
+      },
+      "sort" : [ "ANTIGONUS", 109467 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109465",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109466
+      },
+      "sort" : [ "ANTIGONUS", 109466 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109464",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109465
+      },
+      "sort" : [ "ANTIGONUS", 109465 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109463",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109464
+      },
+      "sort" : [ "ANTIGONUS", 109464 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109462",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109463
+      },
+      "sort" : [ "ANTIGONUS", 109463 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109461",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109462
+      },
+      "sort" : [ "ANTIGONUS", 109462 ]
+    }, {
+      "_index" : "shakespeare",
+      "_type" : "line",
+      "_id" : "109460",
+      "_score" : null,
+      "_source" : {
+        "speaker" : "ANTIGONUS",
+        "line_id" : 109461
+      },
+      "sort" : [ "ANTIGONUS", 109461 ]
+    } ]
+  }
+}

@@ -2,6 +2,14 @@
 History
 =======
 
+0.4 (2016-7-20)
+---------------
+
+This release introduces the django contrib module to enable filtering with lifter's python backend
+on a django queryset, effectively reducing number of queries sent to the database.
+
+Work is also in progress regarding caching (see #39) but this is not over yet.
+
 0.3 (2016-7-12)
 ---------------
 

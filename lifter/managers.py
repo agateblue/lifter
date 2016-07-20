@@ -23,13 +23,7 @@ class Manager(object):
 
     def execute(self, query):
         store = self.get_store()
-
-        try:
-            handler = getattr(store, 'handle_{0}'.format(query.action))
-        except AttributeError:
-            raise ValueError('Unsupported {0} action'.format(query.action))
-
-        return handler(query)
+        return store.execute_query(query)
 
     def __getattr__(self, attr):
         # Try to proxy on queryset if possible

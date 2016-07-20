@@ -25,6 +25,8 @@ Contents:
    quickstart
    query
    backends/index
+   caching/index
+   contrib/index
    performance
    contributing
    authors
