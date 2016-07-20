@@ -17,7 +17,8 @@ def main():
         os.system('make html')
 
     server = Server()
-    server.watch('*.rst', shell('make html'))
+    server.watch('./*.rst', shell('make html'))
+    server.watch('./*/*.rst', shell('make html'))
     webbrowser.open_new_tab('http://127.0.0.1:5500')
     server.serve(root='_build/html')
 

@@ -104,8 +104,8 @@ class RESTStore(store.Store):
 
     def __init__(self, *args, **kwargs):
         self._session = kwargs.pop('session', None) or requests.Session()
-        self.base_url = kwargs['base_url']
-        super(RESTStore, self).__init__()
+        self.base_url = kwargs.pop('base_url')
+        super(RESTStore, self).__init__(*args, **kwargs)
 
     @property
     def session(self):

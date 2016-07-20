@@ -32,3 +32,10 @@ class StoreError(LifterException):
     The store cannot answer our query
     """
     pass
+
+class NotInCache(LifterException, KeyError):
+    pass
+
+
+class DisabledCache(LifterException):
+    pass
