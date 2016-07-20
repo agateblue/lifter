@@ -19,6 +19,9 @@ class Path(object):
         self._getters = []
 
     def __getattr__(self, part):
+        if part.startswith('__'):
+            raise AttributeError('You cannot access special methods on paths')
+
         return self.__class__(self.path + [part])
 
     __getitem__ = __getattr__
@@ -202,10 +205,20 @@ class Query(object):
     """Will gather all query related data (queried field, ordering, distinct, etc.)
     and be passed to the manager"""
     def __init__(self, action, filters=None, window=None, orderings=[], **hints):
-        self.filters = filters
-        self.orderings = orderings
         self.action = action
+        """The query action, a string, such as "select", "count", "insert"..."""
+
+        self.filters = filters
+        """A :py:class:`QueryNodeWrapper` or :py:class:`QueryNode` instance
+        representing additional filters on the query"""
+
+        self.orderings = orderings
+        """An iterable of :py:class:`Ordering` instances to apply a custom ordering to the
+        result set"""
+
         self.window = window
+        """A :py:class:`Window` instance to deal with limits, offset and pagination"""
+
         self.hints = hints
 
     def clone(self, **kwargs):

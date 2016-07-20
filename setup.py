@@ -22,6 +22,7 @@ requirements = [
 ]
 
 test_requirements = [
+    'pytest',
     'mock', # TODO: put package test requirements here
     'requests_mock',
 ]
@@ -44,6 +45,7 @@ setup(
     license="BSD",
     zip_safe=False,
     keywords='lifter',
+    setup_requires=['pytest-runner'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -56,6 +58,6 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
     ],
-    test_suite='tests',
-    tests_require=test_requirements
+    # test_suite='tests',
+    tests_require=test_requirements,
 )
