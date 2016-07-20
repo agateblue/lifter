@@ -15,7 +15,7 @@ What is lifter?
     :target: https://travis-ci.org/EliotBerriot/lifter
 
 
-Lifter is a lightweight query engine, inspired by Django ORM and SQLAlchemy.
+Lifter is a generic query engine, inspired by Django ORM and SQLAlchemy.
 
 Its goal is to provide a unique interface to query any type of data, regardless of the underlying query language or data backend (SQL, REST, Python objects...).
 
@@ -30,7 +30,6 @@ Useful links:
 Features
 --------
 
-* Operates on plain objects or mapping (such as dictionaries)
 * Queryset API similar to Django_  and SQLAlchemy_
 * Lazy querysets
 * Composable queries
