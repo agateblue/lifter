@@ -23,6 +23,7 @@ requirements = [
 
 test_requirements = [
     'pytest',
+    'django',
     'mock', # TODO: put package test requirements here
     'requests_mock',
 ]

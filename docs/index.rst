@@ -23,10 +23,10 @@ Contents:
    overview
    installation
    quickstart
-   .. api
    query
    backends/index
    caching/index
+   contrib/index
    performance
    contributing
    authors
