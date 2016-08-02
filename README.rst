@@ -90,7 +90,7 @@ To use lifter in your project, you'll only need the following instructions:
     store = IterableStore(users)
     manager = store.query(User)
 
-Getting getting all active 26 years old users:
+Getting all active 26 years old users:
 
 .. code-block:: python
 
