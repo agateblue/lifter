@@ -4,6 +4,7 @@ include HISTORY.rst
 include LICENSE
 include README.rst
 
+recursive-include lifter *.html *.png *.gif *js *.css *jpg *jpeg *svg *py
 recursive-include tests *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
