@@ -2,6 +2,13 @@
 History
 =======
 
+0.4.1 (2016-8-2)
+------------------
+
+This release fix issue #42: some files were not included in lifter distribution,
+mainly the ``backends`` and ``contrib`` directories, causing various imports to fail.
+
+
 0.4 (2016-7-20)
 ---------------
 
