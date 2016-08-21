@@ -2,7 +2,7 @@ import datetime
 
 from lifter import models
 from lifter.adapters import RegexAdapter
-from lifter.backends import filesystem
+from lifter.backends import document
 
 
 class LogEntry(models.Model):
@@ -26,5 +26,5 @@ class LogEntryFileAdapter(RegexAdapter):
         return field.to_python(self, value, date_format=date_format)
 
 
-store = filesystem.FileStore(path='/tmp/apache.log')
+store = document.DocumentStore(url='file:///tmp/apache.log')
 manager = store.query(LogEntry, adapter=LogEntryFileAdapter())

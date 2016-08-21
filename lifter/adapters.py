@@ -61,11 +61,12 @@ class DictAdapter(Adapter):
             to_convert = data
 
         if self.recursive:
-            # we convert subdirectories to proper model instances
+            # we convert subdictionaries to proper model instances
             for key, value in to_convert.items():
                 if isinstance(value, dict):
                     to_convert[key] = self.parse(value, models.Model)
         return to_convert
+
 
 class RegexAdapter(Adapter):
     def __init__(self, *args, **kwargs):
@@ -78,3 +79,20 @@ class RegexAdapter(Adapter):
     def get_raw_data(self, data, model):
         match = self.compiled_regex.match(data)
         return match.groupdict()
+
+
+class ETreeAdapter(Adapter):
+
+    def get_raw_data(self, data, model):
+
+        return {
+            self.tag_to_field_name(e.tag): e.text
+            for e in data
+        }
+
+    def tag_to_field_name(self, tag):
+        """
+        Since the tag may be fully namespaced, we want to strip the namespace
+        information
+        """
+        return tag.split('}')[-1]
