@@ -38,7 +38,7 @@ class TestES2Backend(mixins.HTTPMixin):
 
     def test_can_build_correct_url_for_model(self):
         manager = self.store.query(Scene)
-        part = manager.store.get_model_url_part()
+        part = manager.store.get_model_url_part(Scene)
         self.assertEqual(part, 'shakespeare/scene')
 
     @requests_mock.mock()

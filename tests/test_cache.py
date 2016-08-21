@@ -42,23 +42,24 @@ class TestCache(unittest.TestCase):
         self.manager = self.store.query(TestModel)
 
     def test_store_uses_store_model_app_name_and_hashed_query_for_cache_key(self):
-        refined_store = self.manager.store
+        store = self.manager.store
         query = self.manager.all().query
         cache_parts = [
             self.store.identifier,
             TestModel._meta.app_name,
             TestModel._meta.name,
-            refined_store.hash_query(query),
+            store.hash_query(query),
         ]
         expected = ':'.join(cache_parts)
-        self.assertEqual(refined_store.get_cache_key(query), expected)
+        self.assertEqual(
+            store.get_cache_key(query, TestModel), expected)
 
     def test_store_tries_to_return_from_cache_before_executing_query(self):
-        with mock.patch('lifter.store.RefinedStore.get_from_cache', side_effect=exceptions.NotInCache()) as m:
+        with mock.patch('lifter.store.Store.get_from_cache', side_effect=exceptions.NotInCache()) as m:
             qs = self.manager.all()
             query = qs.query
             list(qs)
-            m.assert_called_with(query)
+            m.assert_called_with(query, TestModel)
 
     def test_store_stores_result_in_cache_when_queyr_is_executed(self):
         r = self.manager.count()

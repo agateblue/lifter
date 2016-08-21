@@ -59,19 +59,17 @@ class PythonManager(managers.Manager):
         compiled_query = QueryImpl(query)
         return compiled_query(obj)
 
-    def __init__(self, *args, **kwargs):
-        store = kwargs.get('store')
-        if not hasattr(store, 'get_all_values'):
-            kwargs['store'] = IterableStore(store)
 
-        super(PythonManager, self).__init__(*args, **kwargs)
-
-class RefinedIterableStore(store.RefinedStore):
-
+class IterableStore(store.Store):
     manager_class = PythonManager
 
-    def get_all_values(self, query):
-        return self.parent.values
+    def __init__(self, values, *args, **kwargs):
+        self.values = values
+        super(IterableStore, self).__init__(*args, **kwargs)
+
+    def get_default_adapter(self, model):
+        return None
+
 
     def get_values(self, query):
         compiled_filters = None
@@ -79,10 +77,10 @@ class RefinedIterableStore(store.RefinedStore):
             compiled_filters = QueryImpl(query.filters)
 
         if not compiled_filters:
-            for obj in self.get_all_values(query):
+            for obj in self.values:
                 yield obj
         else:
-            for obj in self.get_all_values(query):
+            for obj in self.values:
                 if compiled_filters(obj):
                     yield obj
         # return filter(self.query, self._iter_data)
@@ -101,21 +99,21 @@ class RefinedIterableStore(store.RefinedStore):
 
         return first_match
 
-    def handle_exists(self, query):
-        iterator = self.handle_select(query.clone(orderings=None))
+    def handle_exists(self, query, model):
+        iterator = self.handle_select(query.clone(orderings=None), model)
         for row in iterator:
             return True
         return False
 
-    def handle_count(self, query):
-        return len(list(self.handle_select(query.clone(orderings=None))))
+    def handle_count(self, query, model):
+        return len(list(self.handle_select(query.clone(orderings=None), model)))
 
-    def handle_select(self, query):
+    def handle_select(self, query, model):
 
         iterator = self.get_values(query)
 
         if query.hints.get('force_single', False):
-            return self.select_single(iterator)
+            return [self.select_single(iterator)]
         if query.orderings:
             random_value = lambda v: random.random()
 
@@ -135,9 +133,8 @@ class RefinedIterableStore(store.RefinedStore):
             return list(iterator)[query.window.as_slice()]
         return iterator
 
-    @store.cast_to_values
-    def handle_values(self, query):
-        return self.handle_select(query)
+    def handle_values(self, query, model):
+        return self.handle_select(query, model)
 
     def collect_values(self, data, aggregates):
         r = {}
@@ -147,8 +144,8 @@ class RefinedIterableStore(store.RefinedStore):
                 l.append(store.path_to_value(row, aggregate.path))
         return r
 
-    def handle_aggregate(self, query):
-        data = self.handle_select(query)
+    def handle_aggregate(self, query, model):
+        data = self.handle_select(query, model)
         values = self.collect_values(data, query.hints['aggregates'])
         if query.hints.get('flat', False):
             return [
@@ -161,10 +158,21 @@ class RefinedIterableStore(store.RefinedStore):
         }
 
 
-class IterableStore(store.Store):
+class DummyStore(store.Store):
+    """
+    A dummy store that cannot understand / execute queries but instead
+    will cast results from source to model, then hand over the model instances
+    to an IterableStore
+    """
 
-    refined_class = RefinedIterableStore
+    def load(self, model, adapter):
+        raise NotImplementedError
 
-    def __init__(self, values, *args, **kwargs):
-        self.values = values
-        super(IterableStore, self).__init__(*args, **kwargs)
+    def _execute(self, query, model, adapter, raw=False):
+        """
+        We have to override this because in some situation
+        (such as with Filebackend, or any dummy backend)
+        we have to parse / adapt results *before* when can execute the query
+        """
+        values = self.load(model, adapter)
+        return IterableStore(values=values)._execute(query, model=model, adapter=None, raw=raw)

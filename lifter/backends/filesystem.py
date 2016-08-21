@@ -1,17 +1,12 @@
-from .python import IterableStore, RefinedIterableStore, PythonManager
+from .python import DummyStore
 
 
-class RefinedFileStore(RefinedIterableStore):
-
-    manager_class = PythonManager
-
-    def get_all_values(self, query):
-        with open(self.parent.path) as f:
-            return [self.adapter.parse(line, self.model) for line in f]
-
-class FileStore(IterableStore):
-    refined_class = RefinedFileStore
+class FileStore(DummyStore):
 
     def __init__(self, path, *args, **kwargs):
         self.path = path
-        super(FileStore, self).__init__(values=[], *args, **kwargs)
+        super(FileStore, self).__init__(*args, **kwargs)
+
+    def load(self, model, adapter):
+        with open(self.path) as f:
+            return [adapter.parse(line, model) for line in f]

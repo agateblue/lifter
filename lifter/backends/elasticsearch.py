@@ -4,20 +4,20 @@ from .. import adapters
 from .. import store
 
 
-class ES2RefinedStore(http.RESTRefinedStore):
+class ES2Store(http.RESTStore):
     pluralize_model_name = False
 
     def get_out_attribute_names_converter(self):
         return lambda v: v
 
-    def get_default_adapter(self):
+    def get_default_adapter(self, model):
         return adapters.DictAdapter(recursive=True, key='_source')
 
     def get_querystring_builder(self, query):
         return ES2QueryStringBuilder()
 
-    def build_query_url(self, query):
-        base = super(ES2RefinedStore, self).build_query_url(query)
+    def build_query_url(self, query, model):
+        base = super(ES2Store, self).build_query_url(query, model)
 
         if query.action == 'select':
             end = '_search'
@@ -32,7 +32,7 @@ class ES2RefinedStore(http.RESTRefinedStore):
         return data
 
     def build_querystring(self, query):
-        qs = super(ES2RefinedStore, self).build_querystring(query)
+        qs = super(ES2Store, self).build_querystring(query)
         if query.window:
             qs['size'] = query.window.size
             qs['from'] = query.window.start_as_int
@@ -43,20 +43,24 @@ class ES2RefinedStore(http.RESTRefinedStore):
 
         return qs
 
-    def handle_count(self, query):
-        url = self.build_query_url(query)
-        request = self.build_request(url, query)
+    def handle_count(self, query, model):
+        url = self.build_query_url(query, model)
+        request = self.build_request(url, query, model)
         response = self.get_response(request)
         parsed_response = self.parse_response(response)
         return parsed_response['count']
 
-    @store.cast_to_values
-    def handle_values(self, query):
-        return self.handle_select(query.clone(action='select'))
+    def handle_values(self, query, model):
+        adapter = self.get_default_adapter(model)
 
+        results = self.handle_select(query.clone(action='select'), model)
+        return self._parse_results(
+            query=query,
+            results=results,
+            model=model,
+            adapter=adapter,
+        )
 
-class ES2Store(http.RESTStore):
-    refined_class = ES2RefinedStore
 
 
 def _get_eq(lookup):

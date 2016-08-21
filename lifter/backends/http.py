@@ -6,7 +6,18 @@ from .. import parsers
 from .. import exceptions
 from .. import utils
 
-class RESTRefinedStore(store.RefinedStore):
+
+class RESTStore(store.Store):
+
+    def __init__(self, *args, **kwargs):
+        self._session = kwargs.pop('session', None) or requests.Session()
+        self.base_url = kwargs.pop('base_url')
+        super(RESTStore, self).__init__(*args, **kwargs)
+
+    @property
+    def session(self):
+        return self._session
+
     pluralize_model_name = True
 
     def get_out_attribute_names_converter(self):
@@ -27,7 +38,7 @@ class RESTRefinedStore(store.RefinedStore):
             'User-Agent': self.get_user_agent(),
         }
 
-    def build_request(self, url, query):
+    def build_request(self, url, query, model):
         method = 'GET'
         headers = self.get_headers(query)
         querystring = self.build_querystring(query)
@@ -36,22 +47,22 @@ class RESTRefinedStore(store.RefinedStore):
 
         return request
 
-    def get_model_url_part(self):
-        app_part = self.model._meta.app_name
+    def get_model_url_part(self, model):
+        app_part = model._meta.app_name
         if self.pluralize_model_name:
-            model_part = self.model._meta.name_plural
+            model_part = model._meta.name_plural
         else:
-            model_part = self.model._meta.name
+            model_part = model._meta.name
         if app_part:
             return app_part + '/' + model_part
         return model_part
 
-    def build_query_url(self, query):
-        model_part = self.get_model_url_part()
-        if self.parent.base_url.endswith('/'):
-            resource_url = self.parent.base_url + model_part
+    def build_query_url(self, query, model):
+        model_part = self.get_model_url_part(model)
+        if self.base_url.endswith('/'):
+            resource_url = self.base_url + model_part
         else:
-            resource_url = self.parent.base_url + '/' + model_part
+            resource_url = self.base_url + '/' + model_part
 
         return resource_url
 
@@ -66,7 +77,7 @@ class RESTRefinedStore(store.RefinedStore):
         return qs
 
     def get_response(self, request):
-        return self.parent.session.send(request)
+        return self.session.send(request)
 
     def parse_response(self, response):
         try:
@@ -86,30 +97,16 @@ class RESTRefinedStore(store.RefinedStore):
     def get_results(self, data, query):
         return data
 
-    @store.cast_results_to_model
-    def handle_select(self, query):
-        url = self.build_query_url(query)
-        request = self.build_request(url, query)
+    def handle_select(self, query, model):
+        url = self.build_query_url(query, model)
+        request = self.build_request(url, query, model)
         response = self.get_response(request)
         parsed_response = self.parse_response(response)
         return self.get_results(parsed_response, query)
 
-    def handle_count(self, query):
+    def handle_count(self, query, model):
         query = query.clone(action='select')
-        return len(self.handle_select(query))
-
-class RESTStore(store.Store):
-
-    refined_class = RESTRefinedStore
-
-    def __init__(self, *args, **kwargs):
-        self._session = kwargs.pop('session', None) or requests.Session()
-        self.base_url = kwargs.pop('base_url')
-        super(RESTStore, self).__init__(*args, **kwargs)
-
-    @property
-    def session(self):
-        return self._session
+        return len(self.handle_select(query, model))
 
 
 class QueryStringBuilder(object):

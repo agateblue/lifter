@@ -8,22 +8,6 @@ from . import query
 from . import utils
 
 
-def cast_results_to_model(f):
-    def wrapper(self, query, *args, **kwargs):
-        results = f(self, query, *args, **kwargs)
-        if query.hints.get('force_single', False):
-            length = len(results)
-            if length > 1:
-                raise exceptions.MultipleObjectsReturned()
-            if length == 0:
-                raise exceptions.DoesNotExist()
-            return self.adapter.parse(results[0], self.model)
-        else:
-            return [self.adapter.parse(result, self.model)
-                    for result in results]
-    return wrapper
-
-
 def path_to_value(data, path, **kwargs):
     soft_fail = kwargs.pop('soft_fail', False)
     getters = [utils.attrgetter(part) for part in path.path]
@@ -37,23 +21,20 @@ def path_to_value(data, path, **kwargs):
         raise
     return data
 
-def cast_to_values(f):
 
-    def wrapper(self, query):
-        from .backends.python import IterableStore
-        results = f(self, query)
-        if query.hints['mode'] == 'mapping':
-            getter = lambda val: {str(path): path_to_value(val, path) for path in query.hints['paths']}
+def cast_to_values(query, results):
+    from .backends.python import IterableStore
+    if query.hints['mode'] == 'mapping':
+        getter = lambda val: {str(path): path_to_value(val, path) for path in query.hints['paths']}
+    else:
+        if query.hints.get('flat', False):
+            getter = lambda val: path_to_value(val, query.hints['paths'][0])
         else:
-            if query.hints.get('flat', False):
-                getter = lambda val: path_to_value(val, query.hints['paths'][0])
-            else:
-                getter = lambda val: tuple(path_to_value(val, path) for path in query.hints['paths'])
-        values = map(getter, results)
+            getter = lambda val: tuple(path_to_value(val, path) for path in query.hints['paths'])
+    values = map(getter, results)
 
-        return IterableStore(values).query(models.Model).all()
+    return IterableStore(values).query(models.Model).all()
 
-    return wrapper
 
 class Store(object):
     """
@@ -61,6 +42,7 @@ class Store(object):
 
     The manager will apply the query on the store to return results
     """
+    manager_class = managers.Manager
 
     def __init__(self, cache=None, identifier=None):
         self.cache = cache
@@ -68,64 +50,35 @@ class Store(object):
         if self.cache and not self.identifier:
             raise ValueError('You must provide a unique identifier if you want to use caching')
 
-    def get_refined_store_class(self, model, adapter=None):
-        return self.refined_class
-
-    def refine(self, model, adapter=None):
-        kls = self.get_refined_store_class(model, adapter)
-        return kls(
-            parent=self,
-            model=model,
-            adapter=adapter,
-            **self.get_refine_kwargs(model, adapter)
-        )
     def query(self, model, adapter=None, **kwargs):
-        return self.refine(model, adapter).get_manager(**kwargs)
+        return self.get_manager(model=model, store=self, adapter=adapter, **kwargs)
 
-    def get_refine_kwargs(self, model, adapter):
-        return {}
+    def get_manager(self, **kwargs):
+        return self.manager_class(**kwargs)
 
+    def get_default_adapter(self, model):
+        return adapters.DictAdapter(recursive=True)
 
-class RefinedStore(object):
-    manager_class = managers.Manager
-
-    def __init__(self, parent, model, adapter):
-        self.parent = parent
-        self.model = model
-        self.adapter = adapter
-        if not self.adapter:
-            self.adapter = self.get_default_adapter()
-
-    def hash_query(self, query):
-        h = hash(query)
-        return hashlib.sha512(str(h).encode('utf-8')).hexdigest()[:20]
-
-    def get_cache_key(self, query):
+    def get_cache_key(self, query, model):
         return ':'.join([
-            self.parent.identifier,
-            str(self.model._meta.app_name),
-            self.model._meta.name,
+            self.identifier,
+            str(model._meta.app_name),
+            model._meta.name,
             self.hash_query(query)
         ])
 
-    def get_from_cache(self, query):
-        key = self.get_cache_key(query)
-        return self.parent.cache.get(key, reraise=True)
+    def get_from_cache(self, query, model):
+        key = self.get_cache_key(query, model)
+        return self.cache.get(key, reraise=True)
 
-    def set_in_cache(self, query, value):
-        key = self.get_cache_key(query)
-        return self.parent.cache.set(key, value)
+    def set_in_cache(self, query, model, value):
+        key = self.get_cache_key(query, model)
+        return self.cache.set(key, value)
 
-    def get_default_adapter(self):
-        return adapters.DictAdapter(recursive=True)
-
-    def get_manager(self, **kwargs):
-        return self.manager_class(model=self.model, store=self, **kwargs)
-
-    def execute_query(self, query):
+    def _execute(self, query, model, adapter, raw=False):
         try:
-            if self.parent.cache:
-                return self.get_from_cache(query)
+            if self.cache:
+                return self.get_from_cache(query, model)
         except (exceptions.NotInCache, exceptions.DisabledCache):
             pass
 
@@ -134,9 +87,40 @@ class RefinedStore(object):
         except AttributeError:
             raise ValueError('Unsupported {0} action'.format(query.action))
 
-        result = handler(query)
+        raw_results = handler(query, model)
 
-        if self.parent.cache:
-            self.set_in_cache(query, result)
+        if self.cache:
+            self.set_in_cache(query, model, raw_results)
 
-        return result
+        if raw:
+            return raw_results
+
+        if query.action == 'count':
+            return raw_results
+
+        if query.action == 'values':
+            return cast_to_values(query, raw_results)
+
+        return self._parse_results(
+            query, raw_results, adapter=adapter, model=model)
+
+    def _parse_results(self, query, results, model, adapter):
+        if query.hints.get('force_single', False):
+            length = len(results)
+            if length > 1:
+                raise exceptions.MultipleObjectsReturned()
+            if length == 0:
+                raise exceptions.DoesNotExist()
+            if adapter:
+                return adapter.parse(results[0], model)
+
+            return results[0]
+        else:
+            if adapter:
+                return [adapter.parse(result, model)
+                        for result in results]
+            return results
+
+    def hash_query(self, query):
+        h = hash(query)
+        return hashlib.sha512(str(h).encode('utf-8')).hexdigest()[:20]

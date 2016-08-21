@@ -42,21 +42,15 @@ Just like Django, lifter models are Python classes representing your data. You c
 Stores
 ******
 
-Stores objects aggregates global information regarding a data source. A good example of store would be a SQL database.
-
-Refined stores
-**************
-
-Refined stores are responsible for parsing queries about a model and returning corresponding data.
-
-If we go back to our previous example, a refined store would be used to connect to our SQL database and run queries against our users table.
+Stores are responsible for parsing queries about a model, send them to an underlying backend and return proper results
+to lifter.
 
 Adapters
 ********
 
 Because we don't want to deal with raw data such as SQL or JSON Responses, adapters are reponsible for converting
 data returned by our refined stores to actual model instances.
-test
+
 Managers
 *********
 

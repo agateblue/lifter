@@ -2,6 +2,12 @@
 History
 =======
 
+RefinedStore removal
+
+RefinedStore where entirely removed from lifter, resulting in a cleaner API / logic.
+You can now implement your own backend simply by creating you own `Store` class.
+
+
 0.4.1 (2016-8-2)
 ------------------
 

@@ -69,7 +69,7 @@ class TestRESTBackend(mixins.HTTPMixin):
         url = 'http://test'
 
         query = manager.filter(Post.author_id == 1).query
-        request = manager.store.build_request(url, query)
+        request = manager.store.build_request(url, query, Post)
         self.assertEqual(request.url, 'http://test/?authorId=1')
 
     def test_adapters_converts_attributes_to_snake_case(self):
