@@ -10,9 +10,11 @@ from .. import utils
 from .. import managers
 
 
-def get_wrapper(query):
+def get_wrapper(query, hints):
     inverted = query.inverted
-    subqueries = [QueryImpl(subquery) for subquery in query.subqueries]
+    subqueries = [
+        QueryImpl(subquery, hints=hints)
+        for subquery in query.subqueries]
 
     if query.operator == 'AND':
         matcher = all
@@ -29,20 +31,24 @@ def get_wrapper(query):
 
 class QueryImpl(object):
 
-    def __init__(self, base_query):
+    def __init__(self, base_query, hints):
         self.base_query = base_query
+        self.hints = hints
         self.test = self.setup_test()
 
     def setup_test(self):
         try:
             # query wrapper
-            return get_wrapper(self.base_query)
+            return get_wrapper(self.base_query, hints=self.hints)
         except AttributeError:
             # Leaf query
             lookup = self.base_query.lookup
             inverted = self.base_query.inverted
+            soft_fail = self.hints.get(
+                'permissive',
+                self.base_query.path_kwargs.get('soft_fail', False))
             def leaf_query(obj):
-                value = store.path_to_value(obj, self.base_query.path, **self.base_query.path_kwargs)
+                value = store.path_to_value(obj, self.base_query.path, soft_fail=soft_fail)
                 result = lookup.lookup(value)
                 if inverted:
                     return not result
@@ -74,7 +80,7 @@ class IterableStore(store.Store):
     def get_values(self, query):
         compiled_filters = None
         if query.filters:
-            compiled_filters = QueryImpl(query.filters)
+            compiled_filters = QueryImpl(query.filters, hints=query.hints)
 
         if not compiled_filters:
             for obj in self.values:

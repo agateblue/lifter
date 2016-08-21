@@ -241,6 +241,8 @@ class Query(object):
             self.window,
             tuple(sorted(self.hints.items()))
         ))
+
+
 class QuerySet(object):
     def __init__(self, manager, model, query=None, orderings=None, distinct=False):
         self.model = model
@@ -274,6 +276,16 @@ class QuerySet(object):
 
     def iterator(self):
         return self.manager.execute(self.query)
+
+    def hints(self, **kwargs):
+        """
+        Use this method to update hints value of the underlying query
+        example: queryset.hints(permissive=False)
+        """
+        new_query = self.query.clone()
+        new_query.hints.update(kwargs)
+
+        return self._clone(query=new_query)
 
     def __eq__(self, other):
         return self.data == other

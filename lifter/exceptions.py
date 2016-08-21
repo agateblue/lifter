@@ -11,7 +11,7 @@ class MultipleObjectsReturned(LifterException, ValueError):
     pass
 
 
-class MissingAttribute(LifterException, ValueError):
+class MissingField(LifterException, ValueError):
     pass
 
 

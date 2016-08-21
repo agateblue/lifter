@@ -36,7 +36,7 @@ def resolve_attr(obj, name):
     except TypeError:
         pass
     except KeyError:
-        raise exceptions.MissingAttribute('Dict {0} has no attribute or key "{1}"'.format(obj, name))
+        raise exceptions.MissingField('Dict {0} has no attribute or key "{1}"'.format(obj, name))
 
     # Okay, it's not a dict, what if we try to access the value as for a regular object attribute?
     try:
@@ -55,7 +55,7 @@ def resolve_attr(obj, name):
     try:
         return IterableAttr(obj, name)
     except TypeError:
-        raise exceptions.MissingAttribute('Object {0} has no attribute or key "{1}"'.format(obj, name))
+        raise exceptions.MissingField('Object {0} has no attribute or key "{1}"'.format(obj, name))
 
 
 def unique_everseen(seq):

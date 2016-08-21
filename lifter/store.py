@@ -15,7 +15,7 @@ def path_to_value(data, path, **kwargs):
     try:
         for getter in getters:
             data = getter(data)
-    except exceptions.MissingAttribute:
+    except exceptions.MissingField:
         if soft_fail:
             return query.Path.DoesNotExist
         raise
@@ -23,14 +23,15 @@ def path_to_value(data, path, **kwargs):
 
 
 def cast_to_values(query, results):
+    soft_fail = query.hints.get('permissive', False)
     from .backends.python import IterableStore
     if query.hints['mode'] == 'mapping':
-        getter = lambda val: {str(path): path_to_value(val, path) for path in query.hints['paths']}
+        getter = lambda val: {str(path): path_to_value(val, path, soft_fail=soft_fail) for path in query.hints['paths']}
     else:
         if query.hints.get('flat', False):
-            getter = lambda val: path_to_value(val, query.hints['paths'][0])
+            getter = lambda val: path_to_value(val, query.hints['paths'][0], soft_fail=soft_fail)
         else:
-            getter = lambda val: tuple(path_to_value(val, path) for path in query.hints['paths'])
+            getter = lambda val: tuple(path_to_value(val, path, soft_fail=soft_fail) for path in query.hints['paths'])
     values = map(getter, results)
 
     return IterableStore(values).query(models.Model).all()

@@ -132,9 +132,9 @@ class TestQueries(TestBase):
 
 
     def test_exception_raised_on_missing_attr(self):
-        with self.assertRaises(lifter.exceptions.MissingAttribute):
+        with self.assertRaises(lifter.exceptions.MissingField):
             list(self.manager.filter(TestModel.x == "y"))
-        with self.assertRaises(lifter.exceptions.MissingAttribute):
+        with self.assertRaises(lifter.exceptions.MissingField):
             list(self.dict_manager.filter(TestModel.x == "y"))
 
     def test_can_count(self):
