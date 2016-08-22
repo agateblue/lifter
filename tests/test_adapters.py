@@ -30,12 +30,26 @@ class TestETreeAdapter(unittest.TestCase):
         )
         self.results = parser.parse(content)
 
+    def test_fields_are_collected_on_adapter_meta(self):
+        fields = {
+            'username': adapters.Field('nom_utilisateur'),
+            'age': adapters.Field(),
+        }
+
+        class A(adapters.Adapter):
+            username = fields['username']
+            age = fields['age']
+
+        a = A()
+        self.assertEqual(a._meta.fields['age'], fields['age'])
+        self.assertEqual(a._meta.fields['username'], fields['username'])
+
     def test_etree_adapter(self):
         self.assertEqual(len(self.results), 8)
 
         adapter = adapters.ETreeAdapter()
         for r in self.results:
-            static_file = adapter.parse(r, StaticFile)
+            static_file = adapter.parse(r, StaticFile, store=None)
             for e in r:
                 name = utils.to_snake_case(adapter.tag_to_field_name(e.tag))
                 v = getattr(static_file, name)

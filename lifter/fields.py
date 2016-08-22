@@ -27,9 +27,9 @@ class CharField(Field):
 
 
 class ForeignKey(Field):
-    def __init__(self, model, **kwargs):
-        self.model = model
+    def __init__(self, to, **kwargs):
+        self.to = to
         super(ForeignKey, self).__init__(**kwargs)
 
     def to_python(self, adapter, v):
-        return self.adapter.store.adapters[self.model].clean(v)
+        return v

@@ -44,7 +44,7 @@ class TestRESTBackend(mixins.HTTPMixin):
             }
         }
         adapter = adapters.DictAdapter(recursive=True)
-        r = adapter.parse(payload, Post)
+        r = adapter.parse(payload, Post, store=None)
         self.assertTrue(isinstance(r.author, models.Model))
 
     @requests_mock.mock()
@@ -78,7 +78,7 @@ class TestRESTBackend(mixins.HTTPMixin):
             'id': 1,
         }
         adapter = adapters.DictAdapter()
-        instance = adapter.parse(payload, Post)
+        instance = adapter.parse(payload, Post, store=None)
         self.assertEqual(instance.author_id, 3)
 
     def test_simple_querystring_builder(self):

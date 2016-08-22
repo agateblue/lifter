@@ -24,10 +24,10 @@ class DocumentStore(DummyStore):
 
     def from_parser(self, document, model, adapter):
         parsed = self.parser.parse(document.read())
-        return [adapter.parse(result, model) for result in parsed]
+        return [adapter.parse(result, model, store=self) for result in parsed]
 
     def from_lines(self, document, model, adapter):
-        return [adapter.parse(line, model) for line in document]
+        return [adapter.parse(line, model, store=self) for line in document]
 
     def load(self, model, adapter):
         with contextlib.closing(self.get_document()) as document:

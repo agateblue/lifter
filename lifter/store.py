@@ -113,12 +113,12 @@ class Store(object):
             if length == 0:
                 raise exceptions.DoesNotExist()
             if adapter:
-                return adapter.parse(results[0], model)
+                return adapter.parse(results[0], model, store=self)
 
             return results[0]
         else:
             if adapter:
-                return [adapter.parse(result, model)
+                return [adapter.parse(result, model, store=self)
                         for result in results]
             return results
 
