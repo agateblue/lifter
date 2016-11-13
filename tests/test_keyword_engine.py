@@ -19,7 +19,7 @@ import lifter.lookups
 from lifter.backends.python import IterableStore
 
 
-class TestObject(object):
+class TObject(object):
     def __init__(self, name, **kwargs):
         self.name = name
         for key, value in kwargs.items():
@@ -30,23 +30,23 @@ class TestObject(object):
 
 class TestBase(unittest.TestCase):
     PARENTS = [
-        TestObject(name='parent_1'),
-        TestObject(name='parent_2'),
+        TObject(name='parent_1'),
+        TObject(name='parent_2'),
     ]
     OBJECTS = [
-        TestObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
-        TestObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
-        TestObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
-        TestObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
+        TObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
+        TObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
+        TObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
+        TObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
     ]
 
     DICTS = [o.__dict__ for o in OBJECTS]
 
     def setUp(self):
-        class TestModel(lifter.models.Model):
+        class TModel(lifter.models.Model):
             pass
-        self.manager = IterableStore(self.OBJECTS).query(TestModel)
-        self.dict_manager = IterableStore(self.DICTS).query(TestModel)
+        self.manager = IterableStore(self.OBJECTS).query(TModel)
+        self.dict_manager = IterableStore(self.DICTS).query(TModel)
 
 class TestQueries(TestBase):
 

@@ -20,7 +20,7 @@ import lifter.lookups
 from lifter.backends.python import IterableStore
 
 
-class TestObject(object):
+class TObject(object):
     def __init__(self, name, **kwargs):
         self.name = name
         for key, value in kwargs.items():
@@ -31,58 +31,58 @@ class TestObject(object):
 
 class TestBase(unittest.TestCase):
     PARENTS = [
-        TestObject(name='parent_1'),
-        TestObject(name='parent_2'),
+        TObject(name='parent_1'),
+        TObject(name='parent_2'),
     ]
     OBJECTS = [
-        TestObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
-        TestObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
-        TestObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
-        TestObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
+        TObject(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
+        TObject(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
+        TObject(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
+        TObject(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
     ]
 
     DICTS = [o.__dict__ for o in OBJECTS]
 
     def setUp(self):
-        self.manager = IterableStore(self.OBJECTS).query(TestModel)
-        self.dict_manager = IterableStore(self.DICTS).query(TestModel)
+        self.manager = IterableStore(self.OBJECTS).query(TModel)
+        self.dict_manager = IterableStore(self.DICTS).query(TModel)
 
 
-class TestModel(lifter.models.Model):
+class TModel(lifter.models.Model):
     pass
 
 
 class TestQueries(TestBase):
 
     def test_model(self):
-        manager = IterableStore(self.OBJECTS).query(TestModel)
-        self.assertEqual(manager.filter(TestModel.a == 1), self.OBJECTS[:2])
+        manager = IterableStore(self.OBJECTS).query(TModel)
+        self.assertEqual(manager.filter(TModel.a == 1), self.OBJECTS[:2])
 
     def test_default_order(self):
         self.assertEqual(list(self.manager.all()), self.OBJECTS)
         self.assertEqual(list(self.dict_manager.all()), self.DICTS)
 
     def test_can_get_using_attribute(self):
-        self.assertEqual(self.manager.all().get(TestModel.name == 'test_1'), self.OBJECTS[0])
-        self.assertEqual(self.dict_manager.all().get(TestModel.name == 'test_1'), self.DICTS[0])
+        self.assertEqual(self.manager.all().get(TModel.name == 'test_1'), self.OBJECTS[0])
+        self.assertEqual(self.dict_manager.all().get(TModel.name == 'test_1'), self.DICTS[0])
 
     def test_can_filter(self):
-        self.assertEqual(self.manager.filter(TestModel.a == 1), self.OBJECTS[:2])
+        self.assertEqual(self.manager.filter(TModel.a == 1), self.OBJECTS[:2])
 
     def test_get_exclude_and_filter_combine_queries_to_and_by_default(self):
-        self.assertEqual(self.manager.all().get(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[3])
-        self.assertEqual(self.manager.all().filter(TestModel.order > 2, TestModel.a == 2), [self.OBJECTS[3]])
-        self.assertEqual(self.manager.all().exclude(TestModel.order > 2, TestModel.a == 2), self.OBJECTS[:3])
+        self.assertEqual(self.manager.all().get(TModel.order > 2, TModel.a == 2), self.OBJECTS[3])
+        self.assertEqual(self.manager.all().filter(TModel.order > 2, TModel.a == 2), [self.OBJECTS[3]])
+        self.assertEqual(self.manager.all().exclude(TModel.order > 2, TModel.a == 2), self.OBJECTS[:3])
 
     def test_can_combine_queries_using_or(self):
-        self.assertEqual(self.manager.all().filter((TestModel.order > 2) | (TestModel.a == 2)), self.OBJECTS[1:])
-        self.assertEqual(self.manager.all().exclude((TestModel.order > 2) | (TestModel.a == 2)), [self.OBJECTS[0]])
-        self.assertEqual(self.manager.all().exclude(~((TestModel.order > 2) | (TestModel.a == 2))), self.OBJECTS[1:])
-        self.assertEqual(self.manager.all().exclude(~(TestModel.order > 2) | (TestModel.a == 2)), [self.OBJECTS[1]])
+        self.assertEqual(self.manager.all().filter((TModel.order > 2) | (TModel.a == 2)), self.OBJECTS[1:])
+        self.assertEqual(self.manager.all().exclude((TModel.order > 2) | (TModel.a == 2)), [self.OBJECTS[0]])
+        self.assertEqual(self.manager.all().exclude(~((TModel.order > 2) | (TModel.a == 2))), self.OBJECTS[1:])
+        self.assertEqual(self.manager.all().exclude(~(TModel.order > 2) | (TModel.a == 2)), [self.OBJECTS[1]])
 
     def test_queryset_is_lazy(self):
         with mock.patch('lifter.query.QuerySet._fetch_all') as fetch:
-            qs = self.manager.all().filter(TestModel.order == 3)
+            qs = self.manager.all().filter(TModel.order == 3)
             fetch.assert_not_called()
             self.assertFalse(qs._populated)
             self.assertEqual(qs._data, [])
@@ -98,78 +98,78 @@ class TestQueries(TestBase):
 
 
     def test_can_combine_filters(self):
-        self.assertEqual(self.manager.filter((TestModel.a == 1) & (TestModel.name == 'test_2')), self.OBJECTS[1:2])
-        self.assertEqual(self.manager.filter(TestModel.a == 1).filter(TestModel.name == 'test_2'), self.OBJECTS[1:2])
+        self.assertEqual(self.manager.filter((TModel.a == 1) & (TModel.name == 'test_2')), self.OBJECTS[1:2])
+        self.assertEqual(self.manager.filter(TModel.a == 1).filter(TModel.name == 'test_2'), self.OBJECTS[1:2])
 
-        self.assertEqual(self.dict_manager.filter((TestModel.a == 1) & (TestModel.name == 'test_2')), self.DICTS[1:2])
-        self.assertEqual(self.dict_manager.filter(TestModel.a == 1).filter(TestModel.name == 'test_2'), self.DICTS[1:2])
+        self.assertEqual(self.dict_manager.filter((TModel.a == 1) & (TModel.name == 'test_2')), self.DICTS[1:2])
+        self.assertEqual(self.dict_manager.filter(TModel.a == 1).filter(TModel.name == 'test_2'), self.DICTS[1:2])
 
     @mock.patch('lifter.query.QuerySet.iterator')
     def test_queries_combine_to_a_single_one(self, mocked_iterator):
-        queryset = self.manager.filter(TestModel.a == 1).filter(TestModel.order == 1)
+        queryset = self.manager.filter(TModel.a == 1).filter(TModel.order == 1)
         len(queryset)
         self.assertEqual(mocked_iterator.call_count, 1)
 
     def test_can_exclude(self):
-        self.assertEqual(self.manager.exclude(TestModel.a == 1), self.OBJECTS[2:])
-        self.assertEqual(self.dict_manager.exclude(TestModel.a == 1), self.DICTS[2:])
+        self.assertEqual(self.manager.exclude(TModel.a == 1), self.OBJECTS[2:])
+        self.assertEqual(self.dict_manager.exclude(TModel.a == 1), self.DICTS[2:])
 
     def test_can_combine_exclude(self):
-        self.assertEqual(self.manager.exclude(TestModel.a == 1).exclude(TestModel.name == 'test_4'), self.OBJECTS[2:3])
-        self.assertEqual(self.manager.exclude((TestModel.a == 2) & (TestModel.name == 'test_4')), self.OBJECTS[:3])
+        self.assertEqual(self.manager.exclude(TModel.a == 1).exclude(TModel.name == 'test_4'), self.OBJECTS[2:3])
+        self.assertEqual(self.manager.exclude((TModel.a == 2) & (TModel.name == 'test_4')), self.OBJECTS[:3])
 
-        self.assertEqual(self.dict_manager.exclude(TestModel.a == 1).exclude(TestModel.name == 'test_4'), self.DICTS[2:3])
-        self.assertEqual(self.dict_manager.exclude((TestModel.a == 2) & (TestModel.name == 'test_4')), self.DICTS[:3])
+        self.assertEqual(self.dict_manager.exclude(TModel.a == 1).exclude(TModel.name == 'test_4'), self.DICTS[2:3])
+        self.assertEqual(self.dict_manager.exclude((TModel.a == 2) & (TModel.name == 'test_4')), self.DICTS[:3])
 
     def test_related_lookups(self):
-        self.assertEqual(self.manager.filter(TestModel.parent.name == 'parent_1'), self.OBJECTS[:2])
-        self.assertEqual(self.manager.exclude(TestModel.parent.name == 'parent_1'), self.OBJECTS[2:])
-        self.assertEqual(self.manager.all().get((TestModel.parent.name == 'parent_1') & (TestModel.order == 2)), self.OBJECTS[0])
+        self.assertEqual(self.manager.filter(TModel.parent.name == 'parent_1'), self.OBJECTS[:2])
+        self.assertEqual(self.manager.exclude(TModel.parent.name == 'parent_1'), self.OBJECTS[2:])
+        self.assertEqual(self.manager.all().get((TModel.parent.name == 'parent_1') & (TModel.order == 2)), self.OBJECTS[0])
 
-        self.assertEqual(self.dict_manager.filter(TestModel.parent.name == 'parent_1'), self.DICTS[:2])
-        self.assertEqual(self.dict_manager.exclude(TestModel.parent.name == 'parent_1'), self.DICTS[2:])
-        self.assertEqual(self.dict_manager.all().get((TestModel.parent.name == 'parent_1') & (TestModel.order == 2)), self.DICTS[0])
+        self.assertEqual(self.dict_manager.filter(TModel.parent.name == 'parent_1'), self.DICTS[:2])
+        self.assertEqual(self.dict_manager.exclude(TModel.parent.name == 'parent_1'), self.DICTS[2:])
+        self.assertEqual(self.dict_manager.all().get((TModel.parent.name == 'parent_1') & (TModel.order == 2)), self.DICTS[0])
 
 
     def test_exception_raised_on_missing_attr(self):
         with self.assertRaises(lifter.exceptions.MissingField):
-            list(self.manager.filter(TestModel.x == "y"))
+            list(self.manager.filter(TModel.x == "y"))
         with self.assertRaises(lifter.exceptions.MissingField):
-            list(self.dict_manager.filter(TestModel.x == "y"))
+            list(self.dict_manager.filter(TModel.x == "y"))
 
     def test_can_count(self):
-        self.assertEqual(self.manager.filter(TestModel.a == 1).count(), 2)
+        self.assertEqual(self.manager.filter(TModel.a == 1).count(), 2)
 
-        self.assertEqual(self.dict_manager.filter(TestModel.a == 1).count(), 2)
+        self.assertEqual(self.dict_manager.filter(TModel.a == 1).count(), 2)
 
 
 
     def test_first(self):
-        self.assertIsNone(self.manager.filter(TestModel.a == 123).first())
-        self.assertIsNotNone(self.manager.filter(TestModel.a == 1).first())
+        self.assertIsNone(self.manager.filter(TModel.a == 123).first())
+        self.assertIsNotNone(self.manager.filter(TModel.a == 1).first())
 
-        self.assertIsNone(self.dict_manager.filter(TestModel.a == 123).first())
-        self.assertIsNotNone(self.dict_manager.filter(TestModel.a == 1).first())
+        self.assertIsNone(self.dict_manager.filter(TModel.a == 123).first())
+        self.assertIsNotNone(self.dict_manager.filter(TModel.a == 1).first())
 
     def test_last(self):
-        self.assertIsNone(self.manager.filter(TestModel.a == 123).last())
-        self.assertIsNotNone(self.manager.filter(TestModel.a == 1).last())
+        self.assertIsNone(self.manager.filter(TModel.a == 123).last())
+        self.assertIsNotNone(self.manager.filter(TModel.a == 1).last())
 
-        self.assertIsNone(self.dict_manager.filter(TestModel.a == 123).last())
-        self.assertIsNotNone(self.dict_manager.filter(TestModel.a == 1).last())
+        self.assertIsNone(self.dict_manager.filter(TModel.a == 123).last())
+        self.assertIsNotNone(self.dict_manager.filter(TModel.a == 1).last())
 
     def test_ordering(self):
 
-        self.assertEqual(self.manager.order_by(TestModel.order)[:2], [self.OBJECTS[2], self.OBJECTS[0]])
-        self.assertEqual(self.manager.order_by(~TestModel.order)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
+        self.assertEqual(self.manager.order_by(TModel.order)[:2], [self.OBJECTS[2], self.OBJECTS[0]])
+        self.assertEqual(self.manager.order_by(~TModel.order)[:2], [self.OBJECTS[3], self.OBJECTS[1]])
 
-        self.assertEqual(self.dict_manager.order_by(TestModel.order)[:2], [self.DICTS[2], self.DICTS[0]])
-        self.assertEqual(self.dict_manager.order_by(~TestModel.order)[:2], [self.DICTS[3], self.DICTS[1]])
+        self.assertEqual(self.dict_manager.order_by(TModel.order)[:2], [self.DICTS[2], self.DICTS[0]])
+        self.assertEqual(self.dict_manager.order_by(~TModel.order)[:2], [self.DICTS[3], self.DICTS[1]])
 
     def test_ordering_using_multiple_paths(self):
 
-        p1 = TestModel.a
-        p2 = TestModel.order
+        p1 = TModel.a
+        p2 = TModel.order
         self.assertEqual(self.manager.order_by(p1, p2)[:2], [self.OBJECTS[0], self.OBJECTS[1]])
         self.assertEqual(self.manager.order_by(~p1, p2)[:2], [self.OBJECTS[2], self.OBJECTS[3]])
         self.assertEqual(self.manager.order_by(p1, ~p2)[:2], [self.OBJECTS[1], self.OBJECTS[0]])
@@ -195,73 +195,73 @@ class TestQueries(TestBase):
         self.assertNotEqual(random_ordered_0, random_ordered_1)
 
     def test_exists(self):
-        self.assertFalse(self.manager.filter(TestModel.a == 123).exists())
-        self.assertTrue(self.manager.filter(TestModel.a == 1).exists())
+        self.assertFalse(self.manager.filter(TModel.a == 123).exists())
+        self.assertTrue(self.manager.filter(TModel.a == 1).exists())
 
-        self.assertFalse(self.dict_manager.filter(TestModel.a == 123).exists())
-        self.assertTrue(self.dict_manager.filter(TestModel.a == 1).exists())
+        self.assertFalse(self.dict_manager.filter(TModel.a == 123).exists())
+        self.assertTrue(self.dict_manager.filter(TModel.a == 1).exists())
 
         # force reload from backend
-        self.assertFalse(self.dict_manager.filter(TestModel.a == 123).exists(from_backend=True))
-        self.assertTrue(self.dict_manager.filter(TestModel.a == 1).exists(from_backend=True))
+        self.assertFalse(self.dict_manager.filter(TModel.a == 123).exists(from_backend=True))
+        self.assertTrue(self.dict_manager.filter(TModel.a == 1).exists(from_backend=True))
 
     def test_get_raise_exception_on_multiple_objects_returned(self):
         with self.assertRaises(lifter.exceptions.MultipleObjectsReturned):
-            self.manager.all().get(TestModel.a == 1)
+            self.manager.all().get(TModel.a == 1)
 
         with self.assertRaises(lifter.exceptions.MultipleObjectsReturned):
-            self.dict_manager.all().get(TestModel.a == 1)
+            self.dict_manager.all().get(TModel.a == 1)
 
     def test_get_raise_exception_on_does_not_exist(self):
         with self.assertRaises(lifter.exceptions.DoesNotExist):
-            self.manager.all().get(TestModel.a == 123)
+            self.manager.all().get(TModel.a == 123)
 
         with self.assertRaises(lifter.exceptions.DoesNotExist):
-            self.dict_manager.all().get(TestModel.a == 123)
+            self.dict_manager.all().get(TModel.a == 123)
 
     def test_can_filter_using_callable(self):
-        self.assertEqual(self.manager.filter(TestModel.order.test(lambda v: v in [1, 3])), [self.OBJECTS[1], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(TModel.order.test(lambda v: v in [1, 3])), [self.OBJECTS[1], self.OBJECTS[2]])
 
-        self.assertEqual(self.dict_manager.filter(TestModel.order.test(lambda v: v in [1, 3])), [self.DICTS[1], self.DICTS[2]])
+        self.assertEqual(self.dict_manager.filter(TModel.order.test(lambda v: v in [1, 3])), [self.DICTS[1], self.DICTS[2]])
 
     def test_values(self):
         expected = [
             {'order': 2},
             {'order': 3},
         ]
-        self.assertEqual(self.manager.filter(TestModel.a == 1).values(TestModel.order), expected)
-        self.assertEqual(self.dict_manager.filter(TestModel.a == 1).values(TestModel.order), expected)
+        self.assertEqual(self.manager.filter(TModel.a == 1).values(TModel.order), expected)
+        self.assertEqual(self.dict_manager.filter(TModel.a == 1).values(TModel.order), expected)
 
         expected = [
             {'order': 2, 'a': 1},
             {'order': 3, 'a': 1},
         ]
-        self.assertEqual(self.manager.filter(TestModel.a == 1).values(TestModel.order, TestModel.a), expected)
-        self.assertEqual(self.dict_manager.filter(TestModel.a == 1).values(TestModel.order, TestModel.a), expected)
+        self.assertEqual(self.manager.filter(TModel.a == 1).values(TModel.order, TModel.a), expected)
+        self.assertEqual(self.dict_manager.filter(TModel.a == 1).values(TModel.order, TModel.a), expected)
 
     def test_values_list(self):
         expected = [2, 3]
-        self.assertEqual(self.manager.filter(TestModel.a == 1).values_list(TestModel.order, flat=True), expected)
-        self.assertEqual(self.dict_manager.filter(TestModel.a == 1).values_list(TestModel.order, flat=True), expected)
+        self.assertEqual(self.manager.filter(TModel.a == 1).values_list(TModel.order, flat=True), expected)
+        self.assertEqual(self.dict_manager.filter(TModel.a == 1).values_list(TModel.order, flat=True), expected)
 
         expected = [
             (2, 1),
             (3, 1),
         ]
-        self.assertEqual(self.manager.filter(TestModel.a == 1).values_list(TestModel.order, TestModel.a), expected)
-        self.assertEqual(self.dict_manager.filter(TestModel.a == 1).values_list(TestModel.order, TestModel.a), expected)
+        self.assertEqual(self.manager.filter(TModel.a == 1).values_list(TModel.order, TModel.a), expected)
+        self.assertEqual(self.dict_manager.filter(TModel.a == 1).values_list(TModel.order, TModel.a), expected)
 
     def test_distinct(self):
-        self.assertEqual(self.manager.all().values_list(TestModel.a, flat=True), [1, 1, 2, 2])
-        self.assertEqual(self.manager.all().values_list(TestModel.a, flat=True).distinct(), [1, 2])
-        self.assertEqual(self.manager.all().values_list(TestModel.parent, flat=True).distinct(), self.PARENTS)
+        self.assertEqual(self.manager.all().values_list(TModel.a, flat=True), [1, 1, 2, 2])
+        self.assertEqual(self.manager.all().values_list(TModel.a, flat=True).distinct(), [1, 2])
+        self.assertEqual(self.manager.all().values_list(TModel.parent, flat=True).distinct(), self.PARENTS)
 
     # def test_can_get_query_from_queryset(self):
     #
-    #     qs = self.manager.filter(TestModel.a == 1).order_by(~TestModel.a)
+    #     qs = self.manager.filter(TModel.a == 1).order_by(~TModel.a)
     #     expected = {
-    #         'filter': TestModel.a == 1,
-    #         'ordering': TestModel.a,
+    #         'filter': TModel.a == 1,
+    #         'ordering': TModel.a,
     #     }
     #     self.assertEqual(qs.base_query, expected)
     #
@@ -315,47 +315,47 @@ class TestQueries(TestBase):
 
 class TestLookups(TestBase):
     def test_gt(self):
-        self.assertEqual(self.manager.filter(TestModel.order > 3), [self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(TModel.order > 3), [self.OBJECTS[3]])
 
     def test_gte(self):
-        self.assertEqual(self.manager.filter(TestModel.order >= 3), [self.OBJECTS[1], self.OBJECTS[3]])
+        self.assertEqual(self.manager.filter(TModel.order >= 3), [self.OBJECTS[1], self.OBJECTS[3]])
 
     def test_lt(self):
-        self.assertEqual(self.manager.filter(TestModel.order < 3), [self.OBJECTS[0], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(TModel.order < 3), [self.OBJECTS[0], self.OBJECTS[2]])
 
     def test_lte(self):
-        self.assertEqual(self.manager.filter(TestModel.order <= 3), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
+        self.assertEqual(self.manager.filter(TModel.order <= 3), [self.OBJECTS[0], self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_startswith(self):
-        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.lookups.startswith('a'))),
+        self.assertEqual(self.manager.filter(TModel.label.test(lifter.lookups.startswith('a'))),
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_endswith(self):
-        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.lookups.endswith('s'))),
+        self.assertEqual(self.manager.filter(TModel.label.test(lifter.lookups.endswith('s'))),
                         [self.OBJECTS[1], self.OBJECTS[2]])
 
     def test_value_in(self):
-        self.assertEqual(self.manager.filter(TestModel.label.test(lifter.lookups.value_in(['alabama', 'arkansas']))),
+        self.assertEqual(self.manager.filter(TModel.label.test(lifter.lookups.value_in(['alabama', 'arkansas']))),
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_range(self):
-        self.assertEqual(self.manager.filter(TestModel.order.test(lifter.lookups.value_range((2, 3)))),
+        self.assertEqual(self.manager.filter(TModel.order.test(lifter.lookups.value_range((2, 3)))),
                         [self.OBJECTS[0], self.OBJECTS[1]])
 
     def test_istartswith(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.istartswith('c'))),
+        self.assertEqual(self.manager.filter(TModel.surname.test(lifter.lookups.istartswith('c'))),
                         [self.OBJECTS[1], self.OBJECTS[3]])
 
     def test_iendswith(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.iendswith('t'))),
+        self.assertEqual(self.manager.filter(TModel.surname.test(lifter.lookups.iendswith('t'))),
                         [self.OBJECTS[0], self.OBJECTS[3]])
 
     def test_contains(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.contains('Lin'))),
+        self.assertEqual(self.manager.filter(TModel.surname.test(lifter.lookups.contains('Lin'))),
                         [self.OBJECTS[2]])
 
     def test_icontains(self):
-        self.assertEqual(self.manager.filter(TestModel.surname.test(lifter.lookups.icontains('lin'))),
+        self.assertEqual(self.manager.filter(TModel.surname.test(lifter.lookups.icontains('lin'))),
                         [self.OBJECTS[2], self.OBJECTS[3]])
 
     def test_field_exists(self):
@@ -391,20 +391,20 @@ class TestAggregation(TestBase):
         self.assertEqual(self.manager.aggregate(*aggregates), expected)
 
     def test_sum(self):
-        self.assertEqual(self.manager.aggregate((TestModel.a, sum)), {'a__sum': 6})
-        self.assertEqual(self.manager.aggregate(total=(TestModel.a, sum)), {'total': 6})
+        self.assertEqual(self.manager.aggregate((TModel.a, sum)), {'a__sum': 6})
+        self.assertEqual(self.manager.aggregate(total=(TModel.a, sum)), {'total': 6})
 
     def test_min(self):
-        self.assertEqual(self.manager.aggregate((TestModel.a, min)), {'a__min': 1})
+        self.assertEqual(self.manager.aggregate((TModel.a, min)), {'a__min': 1})
 
     def test_max(self):
-        self.assertEqual(self.manager.aggregate((TestModel.a, max)), {'a__max': 2})
+        self.assertEqual(self.manager.aggregate((TModel.a, max)), {'a__max': 2})
 
     def test_mean(self):
-        self.assertEqual(self.manager.aggregate((TestModel.a, mean)), {'a__mean': 1.5})
+        self.assertEqual(self.manager.aggregate((TModel.a, mean)), {'a__mean': 1.5})
 
     def test_flat(self):
-        self.assertEqual(self.manager.aggregate((TestModel.a, mean), flat=True), [1.5])
+        self.assertEqual(self.manager.aggregate((TModel.a, mean), flat=True), [1.5])
 
 if __name__ == '__main__':
     import sys

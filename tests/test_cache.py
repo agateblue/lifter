@@ -15,7 +15,7 @@ from lifter import exceptions
 from lifter import query
 from lifter.backends.python import IterableStore
 
-class TestModel(models.Model):
+class TModel(models.Model):
 
     class Meta:
         name = 'test_model'
@@ -29,37 +29,37 @@ class TestCache(unittest.TestCase):
         self.cache = caches.DummyCache()
 
         PARENTS = [
-                TestModel(name='parent_1'),
-                TestModel(name='parent_2'),
+                TModel(name='parent_1'),
+                TModel(name='parent_2'),
             ]
         OBJECTS = [
-            TestModel(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
-            TestModel(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
-            TestModel(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
-            TestModel(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
+            TModel(name='test_1', order=2, a=1, parent=PARENTS[0], label='alabama', surname='Mister T'),
+            TModel(name='test_2', order=3, a=1, parent=PARENTS[0], label='arkansas', surname='Colonel'),
+            TModel(name='test_3', order=1, a=2, parent=PARENTS[1], label='texas', surname='Lincoln'),
+            TModel(name='test_4', order=4, a=2, parent=PARENTS[1], label='washington', surname='clint'),
         ]
         self.store = IterableStore(OBJECTS, identifier='test', cache=self.cache)
-        self.manager = self.store.query(TestModel)
+        self.manager = self.store.query(TModel)
 
     def test_store_uses_store_model_app_name_and_hashed_query_for_cache_key(self):
         store = self.manager.store
         query = self.manager.all().query
         cache_parts = [
             self.store.identifier,
-            TestModel._meta.app_name,
-            TestModel._meta.name,
+            TModel._meta.app_name,
+            TModel._meta.name,
             store.hash_query(query),
         ]
         expected = ':'.join(cache_parts)
         self.assertEqual(
-            store.get_cache_key(query, TestModel), expected)
+            store.get_cache_key(query, TModel), expected)
 
     def test_store_tries_to_return_from_cache_before_executing_query(self):
         with mock.patch('lifter.store.Store.get_from_cache', side_effect=exceptions.NotInCache()) as m:
             qs = self.manager.all()
             query = qs.query
             list(qs)
-            m.assert_called_with(query, TestModel)
+            m.assert_called_with(query, TModel)
 
     def test_store_stores_result_in_cache_when_queyr_is_executed(self):
         r = self.manager.count()
