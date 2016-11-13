@@ -256,6 +256,124 @@ class TestQueries(TestBase):
         self.assertEqual(self.manager.all().values_list(TModel.a, flat=True).distinct(), [1, 2])
         self.assertEqual(self.manager.all().values_list(TModel.parent, flat=True).distinct(), self.PARENTS)
 
+    def test_run_filter_on_nested_iterables(self):
+        data = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {
+                        'name': 'nice',
+                    },
+                    {
+                        'name': 'friendly',
+                    },
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {
+                        'name': 'friendly',
+                    },
+                ]
+            },
+        ]
+
+        class User(lifter.models.Model):
+            pass
+
+        manager = IterableStore(data).query(User)
+        users = list(manager.all())
+
+        query = User.tags.name == 'nice'
+        self.assertEqual(manager.filter(query), [users[0]])
+
+        query = User.tags.name == 'friendly'
+        self.assertEqual(manager.filter(query), users)
+
+        query = (User.tags.name == 'friendly') & (User.name == 'Bill')
+        self.assertEqual(manager.filter(query), [users[1]])
+
+    def test_conditional_field_inside_nested_iterable(self):
+        data = [
+            {
+                'id': 1,
+                'members': [
+                    {'name': 'son', 'dob': '2/24/2000'},
+                    {'name': 'dad'},
+                ]
+            },
+            {
+                'id': 2,
+                'members': [
+                    {'name': 'forever_alone', 'cats': 12}
+                ]
+            }
+        ]
+
+        class Family(lifter.models.Model):
+            pass
+
+        manager = IterableStore(data).query(Family)
+        families = list(manager.all())
+
+        # get families with son/dob members
+        son_dob_families = manager.filter(
+            Family.members.name == 'son',
+            Family.members.dob.exists())
+
+        self.assertEqual(son_dob_families, [families[0]])
+
+    def test_can_query_nested_nested_iterables(self):
+        data = [
+            {
+                'name': 'Kurt',
+                'tags': [
+                    {
+                        'name': 'nice',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_2'},
+                        ]
+                    },
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_0'},
+                        ]
+                    },
+                ]
+            },
+            {
+                'name': 'Bill',
+                'tags': [
+                    {
+                        'name': 'friendly',
+                        'subtags': [
+                            {'name': 'subtag_1'},
+                            {'name': 'subtag_3'},
+                        ]
+                    },
+                ]
+            },
+        ]
+
+        class User(lifter.models.Model):
+            pass
+
+        manager = IterableStore(data).query(User)
+        users = list(manager.all())
+
+        self.assertEqual(manager.filter(User.tags.name == 'nice'), [users[0]])
+        self.assertEqual(
+            manager.filter(User.tags.subtags.name == 'subtag_0'), [users[0]])
+        self.assertEqual(
+            manager.filter(User.tags.subtags.name == 'subtag_1'),
+            [users[0], users[1]])
+        self.assertEqual(
+            manager.filter(User.tags.subtags.name == 'subtag_3'),
+            [users[1]])
+
     # def test_can_get_query_from_queryset(self):
     #
     #     qs = self.manager.filter(TModel.a == 1).order_by(~TModel.a)
