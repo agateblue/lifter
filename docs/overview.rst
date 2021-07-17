@@ -13,7 +13,7 @@ a real REST API when it's time.
 .. _TinyDB: http://tinydb.readthedocs.org/en/latest/
 .. _SQLAlchemy: http://docs.sqlalchemy.org/en/rel_1_0/orm/tutorial.html#common-filter-operators
 
-To achieve this, lifter tries to be as agnostic and flexible as possible regarding data sources, while adressing most common use cases.
+To achieve this, lifter tries to be as agnostic and flexible as possible regarding data sources, while addressing most common use cases.
 
 The big picture
 ---------------
@@ -48,7 +48,7 @@ to lifter.
 Adapters
 ********
 
-Because we don't want to deal with raw data such as SQL or JSON Responses, adapters are reponsible for converting
+Because we don't want to deal with raw data such as SQL or JSON Responses, adapters are responsible for converting
 data returned by our refined stores to actual model instances.
 
 Managers

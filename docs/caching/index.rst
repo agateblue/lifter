@@ -27,7 +27,7 @@ Caching is configured on store creation, via the following API:
     store = http.RESTStore(identifier='my_store', cache=cache)
     manager = store.query(MyModel)
 
-You can use the same :py:class:`Cache` instance accross multiple store if you want, this won't lead to cache collisions.
+You can use the same :py:class:`Cache` instance across multiple store if you want, this won't lead to cache collisions.
 
 
 How does it work?

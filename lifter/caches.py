@@ -36,7 +36,7 @@ class Cache(object):
         :param key: the key to query
         :type key: str
         :param default: the value to return if the key does not exist in cache
-        :param reraise: wether an exception should be thrown if now value is found, defaults to False.
+        :param reraise: whether an exception should be thrown if now value is found, defaults to False.
         :type key: bool
 
         Example usage:

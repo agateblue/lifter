@@ -380,7 +380,7 @@ You can chain querysets at will using :py:func:`filter` and/or :py:func:`exclude
 
     manager.exclude(User.age == 34).filter(User.is_active == True).filter(User.has_beard == False)
 
-The previous example tranlates to:
+The previous example translates to:
 
 1. In all users, exclude then one where `age` equals 34
 2. Then, from the previous queryset, keep only active users
